@@ -18,10 +18,6 @@ function Res:unload()
 	end
 end
 
-function Res.get(name)
-	return resources[name]
-end
-
 function Res.start(name, urls)
 	local res = resources[name] or Res.new(name)
 	resources[name] = res
@@ -39,7 +35,7 @@ function Res.start(name, urls)
 		end)
 	end
 
-	triggerServerEvent('onClientReady', resourceRoot, name)
+	--setTimer(function() triggerServerEvent('onClientReady', resourceRoot, name) end, 500, 1)
 end
 addEvent('onResStart', true)
 addEventHandler('onResStart', resourceRoot, Res.start)
@@ -52,6 +48,17 @@ end
 addEvent('onResStop', true)
 addEventHandler('onResStop', resourceRoot, Res.stop)
 
+function Res.inspect(name)
+	local name = name:lower()
+	local res = resources[name]
+	if res then
+		iprint('client', res)
+	end
+end
+
+function Res.get(name)
+	return name and resources[name]
+end
 
 Script = {}
 
@@ -95,6 +102,7 @@ function Script:unload()
 end
 
 function Script.download(url, callback)
+	if not url then return end
 	requestBrowserDomains({url}, true, function()
 		if isBrowserDomainBlocked(url, true) then
 			Script.download(url, callback)
@@ -111,4 +119,6 @@ function Script.create(name, buffer)
 	str = ('return function() local s = Script.new("%s") %s return s end'):format(name, str)
 	return loadstring(str)()
 end
-	
+
+
+addCommandHandler('inspectres', function(...) if not arg[2] then return end Res.inspect(arg[2]) end)
