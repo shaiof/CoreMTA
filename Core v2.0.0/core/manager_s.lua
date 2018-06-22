@@ -11,13 +11,3 @@ function requestAccounts()
 end
 addEvent('requestAccounts', true)
 addEventHandler('requestAccounts', resourceRoot, requestAccounts)
-
-addCommandHandler('l', requestAccounts)
-
-addCommandHandler('c', function(plr)
-	Acc.create(plr)
-end)
-
-addCommandHandler('d', function(_, _, id)
-	Acc.delete(id)
-end)
