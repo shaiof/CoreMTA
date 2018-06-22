@@ -85,8 +85,12 @@ function Res.inspect(name)
 	local name = name:lower()
 	local res = resources[name]
 	if res then
-		iprint(res)
+		iprint('server', res)
 	end
+end
+
+function Res.get(name)
+	return name and resources[name]
 end
 
 
@@ -166,12 +170,13 @@ end
 addEvent('onClientReady', true)
 
 addEventHandler('onPlayerJoin', root, function()
-	for name, url in pairs(loadedScripts.client) do
-		triggerClientEvent(source, 'onResStart', resourceRoot, name, url)
+	-- needs to be improved. should only do 1 trigger which passes all url at once.
+	for name, res in pairs(resources) do
+		triggerClientEvent(source, 'onResStart', resourceRoot, name, res.client)
 	end
 end)
 
-addCommandHandler('startres', function(...) Res.start(arg[3]) end)
-addCommandHandler('stopres', function(...) Res.stop(arg[3]) end)
-addCommandHandler('restartres', function(...) Res.restart(arg[3]) end)
-addCommandHandler('inspectres', function(...) Res.inspect(arg[3]) end)
+addCommandHandler('startres', function(...) if not arg[3] then return end Res.start(arg[3]) end)
+addCommandHandler('stopres', function(...) if not arg[3] then return end Res.stop(arg[3]) end)
+addCommandHandler('restartres', function(...) if not arg[3] then return end Res.restart(arg[3]) end)
+addCommandHandler('inspectres', function(...) if not arg[3] then return end Res.inspect(arg[3]) end)
