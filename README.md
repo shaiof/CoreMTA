@@ -26,4 +26,4 @@ I'm releasing this script for the people of MTA. I wanted to change MTA, here's 
 And My Partner Tails -<br>
 Name: Tails<br>
 Description:<br>
-Professional scripter with a partner named Loki. The two of them became legendary for creating the G&T Cinema.
+Professional scripter with a partner named Loki. The two of them became legendary for creating the Cinema Experience.
