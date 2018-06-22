@@ -1,6 +1,6 @@
 This script was originally made by Shay and Tails
 
-Name: Shaio Deto Fencski (Shay)\n
+Name: Shaio Deto Fencski (Shay)<br>
 Age: 17\n
 Scripts:\n
 -- John Flowers Freeroam Boredom Revamped Scripts\n
