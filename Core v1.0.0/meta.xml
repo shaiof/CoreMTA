@@ -1,0 +1,12 @@
+<meta>
+   <info name="ST: RP" author="ShayF, Tails" type="script" version="1.0"/>
+   <min_mta_version client="1.5.5" server="1.5.5"/>
+   <oop>true</oop>
+   <!-- utils -->
+   <script src="utils.lua" type="shared"/>
+   <!-- core -->
+   <script src="core/sql/server.lua" type="server"/>
+
+   <script src="core/loader/client.lua" type="client" cache="false"/>
+   <script src="core/loader/server.lua" type="server"/>
+</meta>
