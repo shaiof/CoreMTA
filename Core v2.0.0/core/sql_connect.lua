@@ -1,7 +1,7 @@
 local info = {
 	host = 'localhost',
-	user = 'root',
-	password = '40xmax',
+	user = 'username',
+	password = 'password',
 	dbname = 'mta'
 }
 
