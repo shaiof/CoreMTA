@@ -19,11 +19,9 @@ end
 function clearTable(t)
 	check('t', t)
 	for k, v in pairs(t) do
-		if type(v) == 'userdata' then
-			if getUserdataType(v) ~= 'player' then
-				if isElement(v) or isTimer(v) then
-					v:destroy()
-				end
+		if type(v) == 'userdata' and getUserdataType(v) ~= 'player' then
+			if isElement(v) or isTimer(v) then
+				v:destroy()
 			end
 		end
 		if type(v) == 'table' then
@@ -46,15 +44,6 @@ function getColumnIdFromTitle(gridlist, title)
 		if gridlist:getColumnTitle(id) == title then
 			return id
 		end
-	end
-	return false
-end
-
-function checkDomain(link,callback)
-	callback = callback or function() end
-	check('sf',link,callback)
-	if not isBrowserDomainBlocked(link,true) then
-		return requestBrowserDomains({link},true,callback)
 	end
 	return false
 end
