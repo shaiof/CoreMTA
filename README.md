@@ -6,7 +6,8 @@ Hi! What you'll find here is the unfinished core of a Roleplay gamemode written 
 
 ## About
 
-...todo
+Loading scripts fast, sharing data instantly, allowing for full optimization and flexibility.
+...
 
 ## Our story
 
