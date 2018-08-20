@@ -15,7 +15,7 @@ Loading scripts fast, sharing data instantly, allowing for full optimization and
 
 
 
-##### Projects
+#### Projects -
 
 CoreMTA								https://github.com/shaiof/Core-Loader
 
