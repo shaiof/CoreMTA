@@ -1,11 +1,8 @@
 # Core-Loader by Shay & Tails
 
-
-
 > **Note:** This code is open source, everyone is free to use the code in their own projects.
 
 ## About
-
 Loading scripts fast, sharing data instantly, allowing for full optimization and flexibility.
 ...
 
