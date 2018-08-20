@@ -9,7 +9,7 @@
 Loading scripts fast, sharing data instantly, allowing for full optimization and flexibility.
 ...
 
-## Our story
+## Our History
 
 ### ShayF
 
