@@ -9,7 +9,7 @@
 Loading scripts fast, sharing data instantly, allowing for full optimization and flexibility.
 ...
 
-## Our History
+## Lead Developers
 
 ### ShayF
 
@@ -29,4 +29,4 @@ Discord Integration					https://github.com/shaiof/My-Scripts/tree/master/discord
 
 ### Tails
 
-
+> **Note:** Retired from CoreMTA.
