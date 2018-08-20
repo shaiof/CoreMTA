@@ -12,9 +12,6 @@ Loading scripts fast, sharing data instantly, allowing for full optimization and
 ## Lead Developers
 
 ### ShayF
-
-
-
 #### Projects -
 
 CoreMTA								https://github.com/shaiof/Core-Loader
@@ -27,6 +24,6 @@ SQL Framework						https://github.com/shaiof/Core-Loader/blob/master/Core%20v2.0
 
 Discord Integration					https://github.com/shaiof/My-Scripts/tree/master/discord-events
 
-### Tails
 
+### Tails
 > **Note:** Retired from CoreMTA.
