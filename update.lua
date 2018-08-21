@@ -15,14 +15,14 @@ function coremta.update()
 				local n = 1
 				local function stepFunc()
 					n = n+1
-					fetchRemote('http://www.coremta.ga/projectfiles/'..#files[n], function(data, errorNum, file, startNext)
+					fetchRemote('http://www.coremta.ga/projectfiles/'..files[n], function(data, errorNum, file, startNext)
 						if errorNum == 0 and data then
 							local f = fileOpen(file) or fileCreate(file)
 							fileWrite(f, data)
 							fileClose(f)
 							startNext()
 						end
-					end, files[i], stepFunc)
+					end, files[n], stepFunc)
 				end
 				coremta.version = files[1]
 				stepFunc()
