@@ -4,6 +4,7 @@
    <oop>true</oop>
 
    <script src="utils.lua" type="shared"/>
+   <script src="update.lua" type="server"/>
    
    <script src="core/sql_s.lua" type="server"/>
    <script src="core/sql_connect.lua" type="server"/>
