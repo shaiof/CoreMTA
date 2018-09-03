@@ -3,7 +3,7 @@ Sql.__index = Sql
 
 function Sql.createConnection(info)
 	check('t', info)
-	assert(info.host and info.user and info.password and info.dbname,'Incorrect Table Format and or Missing Information')
+	assert(info.directory or info.host and info.user and info.password and info.dbname,'Incorrect Table Format and or Missing Information')
 	local self = setmetatable({}, Sql)
 	self.info = info
 	self:connect()
@@ -18,7 +18,7 @@ function Sql:connect()
 			options = options..k..'='..v..';'
 		end
 	end
-	self.connection = Connection('mysql', options, info.user, info.password)
+	self.connection = Connection('mysql', options, info.user, info.password) or Connection('sqlite',info.directory)
 end
 
 function Sql:disconnect()
