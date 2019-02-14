@@ -1,16 +1,18 @@
 Res = {}
 local resources = {}
+local clientResources = {}
 
-function Res.new(name)
+function Res.new(name)-- create a parent table being the resource
 	local self = setmetatable({}, {__index = Res})
 	self.name = name
-	self.server = {}
-	self.client = {}
+	self.server = {}-- serverside files
+	self.client = {}-- clientside files
+	print(name..' loaded into memory')
 	return self
 end
 
 function Res:loadServerScript(fileName, buffer)
-	self.server[fileName] = Script.create(self.name, buffer)()
+	self.server[fileName] = Script.create(self.name, buffer)()-- goto Script.create()
 end
 
 function Res:loadClientScript(url)
@@ -22,6 +24,23 @@ function Res:unload()
 		script:unload()
 	end
 end
+
+function updateScripts(players)
+	if source then players = source end
+	if not players then
+		players = getElementsByType('player')
+	end
+	
+	if type(players) ~= 'table' then
+		for i=1, #players do
+			setElementData(players[i], 'scripts', clientResources)
+		end
+	elseif players and isElement(players) then
+		setElementData(players, 'scripts', clientResources)
+	end
+end
+addEventHandler('onPlayerJoin', root, updateScripts)
+
 
 function Res.start(name)
 	local name = name:lower()
@@ -43,7 +62,18 @@ function Res.start(name)
 	Script.loadServer(name, meta.server)
 	--Res.loadShared(name, meta.shared)
 
-	triggerClientEvent('onResStart', resourceRoot, name, res.client)
+	triggerClientEvent('onResStart', resourceRoot, {{
+		name = name,
+		urls = res.client
+	}})
+	
+	if meta.client[1] then
+		table.insert(clientResources, name)
+	end
+	
+	updateScripts()
+	
+	print(name..' sucessfully started.')
 end
 
 function Res.stop(name)
@@ -90,9 +120,8 @@ function Res.inspect(name)
 end
 
 function Res.get(name)
-	return name and resources[name]
+	return resources[name]
 end
-
 
 Script = {}
 
@@ -139,9 +168,8 @@ function Script.create(name, buffer)
 	local str = buffer:gsub('addCommandHandler', 's:cmd')
 	str = str:gsub('addEventHandler', 's:event')
 	str = str:gsub('setTimer', 's:timer')
-	str = str:gsub('function', 'function Script:newFunc')
-	str = ('return function() local s = Script.new("%s") %s return s end'):format(name, str)
-	return loadstring(str)()
+	str = ('return function() local s = Script.new("%s") %s return s end'):format(name, str)-- format the file before loading to use core functions
+	return loadstring(str)()-- return the loadstring to load the code inside a script files table
 end
 
 function Script.loadServer(name, files)
@@ -171,10 +199,14 @@ end
 addEvent('onClientReady', true)
 
 addEventHandler('onPlayerJoin', root, function()
-	-- needs to be improved. should only do 1 trigger which passes all url at once.
+	local clientRes = {}
 	for name, res in pairs(resources) do
-		triggerClientEvent(source, 'onResStart', resourceRoot, name, res.client)
+		table.insert(clientRes, {
+			name = name,
+			urls = res.client
+		})
 	end
+	triggerClientEvent(source, 'onResStart', resourceRoot, clientRes)
 end)
 
 addCommandHandler('startres', function(...) if not arg[3] then return end Res.start(arg[3]) end)

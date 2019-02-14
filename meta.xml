@@ -3,18 +3,19 @@
    <min_mta_version client="1.5.4-9.11965.0" server="1.5.4-9.11965.0"/>
    <oop>true</oop>
 
-   <script src="utils.lua" type="shared"/>
-   <script src="update.lua" type="server"/>
+   <script src="utils.lua" type="shared" cache="false"/>
+   <script src="usefulFunctions/shared.lua" type="shared" cache="false"/>
+   <script src="usefulFunctions/client.lua" type="client" cache="false"/>
+   <script src="usefulFunctions/server.lua" type="server"/>
    
    <script src="core/sql_s.lua" type="server"/>
-   <script src="core/sql_connect.lua" type="server"/>
    
    <script src="core/acc_s.lua" type="server"/>
    <script src="core/user_s.lua" type="server"/>
 
    <script src="core/manager_s.lua" type="server"/>
-   <script src="core/manager_c.lua" type="client"/>
+   <script src="core/manager_c.lua" type="client" cache="false"/>
 
    <script src="core/loader_s.lua" type="server"/>
-   <script src="core/loader_c.lua" type="client"/>
+   <script src="core/loader_c.lua" type="client" cache="false"/>
 </meta>

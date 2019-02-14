@@ -1,5 +1,7 @@
 Res = {}
+local clientResources = {}
 local resources = {}
+--test
 
 function Res.new(name)
 	local self = setmetatable({}, {__index = Res})
@@ -18,21 +20,28 @@ function Res:unload()
 	end
 end
 
-function Res.start(name, urls)
-	local res = resources[name] or Res.new(name)
-	resources[name] = res
+function Res.start(clientRes)
+	for i=1, #clientRes do
+		local name = clientRes[i].name
+		local urls = clientRes[i].urls
+		local res = resources[name] or Res.new(name)
+		resources[name] = res
+		if clientRes[i].urls[1] then
+			table.insert(clientResources, clientRes[i].name)
+		end
 
-	for i=1, #urls do
-		local url = urls[i]
-		Script.download(url, function(data, err)
-			if err > 0 then
-				print('err', err)
-			else
-				if data then
-					res:loadClientScript(url, data)
+		for i=1, #urls do
+			local url = urls[i]
+			Script.download(url, function(data, err)
+				if err > 0 then
+					print('err', err)
+				else
+					if data then
+						res:loadClientScript(url, data)
+					end
 				end
-			end
-		end)
+			end)
+		end
 	end
 
 	--setTimer(function() triggerServerEvent('onClientReady', resourceRoot, name) end, 500, 1)
@@ -41,9 +50,12 @@ addEvent('onResStart', true)
 addEventHandler('onResStart', resourceRoot, Res.start)
 
 function Res.stop(name)
-	resources[name]:unload()
-	resources[name] = nil
-	for i=1, 2 do collectgarbage() end
+	local res = resources[name]
+	if res then
+		res:unload()
+		resources[name] = nil
+		for i=1, 2 do collectgarbage() end
+	end
 end
 addEvent('onResStop', true)
 addEventHandler('onResStop', resourceRoot, Res.stop)
@@ -122,3 +134,18 @@ end
 
 
 addCommandHandler('inspectres', function(...) if not arg[2] then return end Res.inspect(arg[2]) end)
+
+
+addEvent('onClientReady')
+function checkScripts()
+	local server = getElementData(localPlayer, 'scripts')
+	for i=1, #server do
+		if not server[i] == clientResources[i] then
+			return
+		end
+	end
+	removeEventHandler('onClientRender', localPlayer, checkScripts)
+	triggerServerEvent('onClientReady', localPlayer)
+	triggerEvent('onClientReady', localPlayer)
+end
+addEventHandler('onClientRender', localPlayer, checkScripts)
