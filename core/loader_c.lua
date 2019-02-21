@@ -1,7 +1,5 @@
 Res = {}
-local clientResources = {}
 local resources = {}
---test
 
 function Res.new(name)
 	local self = setmetatable({}, {__index = Res})
@@ -12,7 +10,7 @@ end
 
 function Res:loadClientScript(fileName, buffer)
 	-- get function that will run and return the script object (see Script.create)
-	local script = Script.create(self.name, buffer)
+	local script = Script.create(self.name, fileName, buffer)
 	-- setup a globals table that will hold all the global vars/functions from the script file
 	local globals = {}
 	-- temporarily allow access to the Lua _G table through the globals table in order to access the global vars/functions in the script
@@ -39,28 +37,72 @@ function Res.start(clientRes)
 		local urls = clientRes[i].urls
 		local res = resources[name] or Res.new(name)
 		resources[name] = res
-		if clientRes[i].urls[1] then
-			table.insert(clientResources, clientRes[i].name)
-		end
 
-		for i=1, #urls do
-			local url = urls[i]
-			Script.download(url, function(data, err)
-				if err > 0 then
-					print('err', err)
+		-- local downloaded = {}
+
+		-- for i=1, #urls do
+		-- 	local url = urls[i]
+		-- 	Script.download(url, function(data, err)
+		-- 		if err > 0 then
+		-- 			print('err', err)
+		-- 		else
+		-- 			if data then
+		-- 				downloaded[i] = {url=url,data=data})
+		-- 			end
+
+		-- 			if #downloaded == #urls then
+		-- 				for j=1, #downloaded do
+		-- 					local dl = downloaded[j]
+		-- 					res:loadClientScript(dl.url, dl.data)
+		-- 				end
+		-- 			end
+		-- 		end
+		-- 	end)
+		-- end
+
+		Res.downloadScripts(urls, function(completed)
+			for i=1, #completed do
+				local file = completed[i]
+				local parts = split(file.url, '/')
+				local fileName = parts[#parts]
+
+				if file.err > 0 then
+					print(i, 'error downloading file:', fileName, file.url)
 				else
-					if data then
-						res:loadClientScript(url, data)
-					end
+					print(i, 'downloaded file:', fileName, file.url)
+					res:loadClientScript(fileName, file.data)
 				end
-			end)
-		end
+			end
+		end)
 	end
 
 	--setTimer(function() triggerServerEvent('onClientReady', resourceRoot, name) end, 500, 1)
 end
 addEvent('onResStart', true)
 addEventHandler('onResStart', resourceRoot, Res.start)
+
+function Res.downloadScripts(urls, callback)
+	local progress = {}
+    local completed = {}
+
+    for i=1, #urls do
+		local url = urls[i]		
+        Script.download(url, function(data, err)
+            progress[i] = {url=url, data=data, filename=filename, err=err}
+
+            for j=1, #urls do
+                local prog = progress[j]
+                if prog then
+                    completed[j] = progress[j]
+                end
+            end
+
+            if #completed == #urls then
+                callback(completed)
+            end
+        end)
+    end
+end
 
 function Res.stop(name)
 	local res = resources[name]
@@ -137,7 +179,7 @@ function Script.download(url, callback)
 	end)
 end
 
-function Script.create(name, buffer)
+function Script.create(name, fileName, buffer)
 	local str = buffer:gsub('addCommandHandler', 's:cmd')
 	str = str:gsub('addEventHandler', 's:event')
 	str = str:gsub('setTimer', 's:timer')

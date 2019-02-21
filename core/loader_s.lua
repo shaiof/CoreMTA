@@ -7,7 +7,6 @@ function Res.new(name) -- create a parent table being the resource
 	self.name = name
 	self.server = {} -- serverside files
 	self.client = {} -- clientside files
-	print(name..' loaded into memory')
 
 	-- self.globals = {}
 	-- self.env = setfenv(self.globals, {__index = _G})
