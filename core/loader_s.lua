@@ -2,17 +2,34 @@ Res = {}
 local resources = {}
 local clientResources = {}
 
-function Res.new(name)-- create a parent table being the resource
+function Res.new(name) -- create a parent table being the resource
 	local self = setmetatable({}, {__index = Res})
 	self.name = name
-	self.server = {}-- serverside files
-	self.client = {}-- clientside files
+	self.server = {} -- serverside files
+	self.client = {} -- clientside files
 	print(name..' loaded into memory')
+
+	-- self.globals = {}
+	-- self.env = setfenv(self.globals, {__index = _G})
+
 	return self
 end
 
 function Res:loadServerScript(fileName, buffer)
-	self.server[fileName] = Script.create(self.name, buffer)()-- goto Script.create()
+	-- get function that will run and return the script object (see Script.create)
+	local script = Script.create(self.name, fileName, buffer)
+	-- setup a globals table that will hold all the global vars/functions from the script file
+	local globals = {}
+	-- temporarily allow access to the Lua _G table through the globals table in order to access the global vars/functions in the script
+	setmetatable(globals, {__index = _G})
+	-- set the environment of the script function to sandbox everything that's executed by/through it
+	setfenv(script, globals)
+	-- execute the script function
+	script = script()
+	-- store the script's globals into the script object
+	script.globals = globals
+	-- store the script object in the server table in the resource object
+	self.server[fileName] = script
 end
 
 function Res:loadClientScript(url)
@@ -24,22 +41,6 @@ function Res:unload()
 		script:unload()
 	end
 end
-
-function updateScripts(players)
-	if source then players = source end
-	if not players then
-		players = getElementsByType('player')
-	end
-	
-	if type(players) ~= 'table' then
-		for i=1, #players do
-			setElementData(players[i], 'scripts', clientResources)
-		end
-	elseif players and isElement(players) then
-		setElementData(players, 'scripts', clientResources)
-	end
-end
-addEventHandler('onPlayerJoin', root, updateScripts)
 
 
 function Res.start(name)
@@ -66,12 +67,6 @@ function Res.start(name)
 		name = name,
 		urls = res.client
 	}})
-	
-	if meta.client[1] then
-		table.insert(clientResources, name)
-	end
-	
-	updateScripts()
 	
 	print(name..' sucessfully started.')
 end
@@ -116,6 +111,9 @@ function Res.inspect(name)
 	local res = resources[name]
 	if res then
 		iprint('server', res)
+		local f = fileCreate('temp.txt')
+		f:write(toJSON(res.server))
+		f:close()
 	end
 end
 
@@ -164,12 +162,23 @@ function Script:cmd(cmd, callback, restricted)
 	table.insert(self.cmds, {cmd, callback})
 end
 
-function Script.create(name, buffer)
+function Script.create(name, fileName, buffer)
 	local str = buffer:gsub('addCommandHandler', 's:cmd')
 	str = str:gsub('addEventHandler', 's:event')
 	str = str:gsub('setTimer', 's:timer')
-	str = ('return function() local s = Script.new("%s") %s return s end'):format(name, str)-- format the file before loading to use core functions
-	return loadstring(str)()-- return the loadstring to load the code inside a script files table
+
+	str = ('return function() local s = Script.new("%s") %s return s end'):format(name, str)
+
+	local fnc, err = loadstring(str)
+	
+	local suc = pcall(f)
+	if not suc then
+		local _, last, lineNum = err:find(':(%d+):')
+		err = err:sub(last+2)
+		error(('[%s][%s]:%s: %s'):format(name, fileName, lineNum, err), 0)
+	else
+		return fnc()
+	end
 end
 
 function Script.loadServer(name, files)
@@ -195,8 +204,6 @@ function Script.loadShared(name, files)
 	Script.loadClient(name, files)
 	Script.loadServer(name, files)
 end
-
-addEvent('onClientReady', true)
 
 addEventHandler('onPlayerJoin', root, function()
 	local clientRes = {}

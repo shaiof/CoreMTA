@@ -11,7 +11,20 @@ function Res.new(name)
 end
 
 function Res:loadClientScript(fileName, buffer)
-	self.client[fileName] = Script.create(self.name, buffer)()
+	-- get function that will run and return the script object (see Script.create)
+	local script = Script.create(self.name, buffer)
+	-- setup a globals table that will hold all the global vars/functions from the script file
+	local globals = {}
+	-- temporarily allow access to the Lua _G table through the globals table in order to access the global vars/functions in the script
+	setmetatable(globals, {__index = _G})
+	-- set the environment of the script function to sandbox everything that's executed by/through it
+	setfenv(script, globals)
+	-- execute the script function
+	script = script()
+	-- store the script's globals into the script object
+	script.globals = globals
+	-- store the script object in the server table in the resource object
+	self.client[fileName] = script
 end
 
 function Res:unload()
@@ -129,23 +142,17 @@ function Script.create(name, buffer)
 	str = str:gsub('addEventHandler', 's:event')
 	str = str:gsub('setTimer', 's:timer')
 	str = ('return function() local s = Script.new("%s") %s return s end'):format(name, str)
-	return loadstring(str)()
-end
 
+	local fnc, err = loadstring(str)
+	
+	local suc = pcall(f)
+	if not suc then
+		local _, last, lineNum = err:find(':(%d+):')
+		err = err:sub(last+2)
+		error(('[%s][%s]:%s: %s'):format(name, fileName, lineNum, err), 0)
+	else
+		return fnc()
+	end
+end
 
 addCommandHandler('inspectres', function(...) if not arg[2] then return end Res.inspect(arg[2]) end)
-
-
-addEvent('onClientReady')
-function checkScripts()
-	local server = getElementData(localPlayer, 'scripts')
-	for i=1, #server do
-		if not server[i] == clientResources[i] then
-			return
-		end
-	end
-	removeEventHandler('onClientRender', localPlayer, checkScripts)
-	triggerServerEvent('onClientReady', localPlayer)
-	triggerEvent('onClientReady', localPlayer)
-end
-addEventHandler('onClientRender', localPlayer, checkScripts)
