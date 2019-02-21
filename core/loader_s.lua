@@ -42,7 +42,6 @@ function Res:unload()
 	end
 end
 
-
 function Res.start(name)
 	local name = name:lower()
 
@@ -171,7 +170,7 @@ function Script.create(name, fileName, buffer)
 
 	local fnc, err = loadstring(str)
 	
-	local suc = pcall(f)
+	local suc = pcall(fnc)
 	if not suc then
 		local _, last, lineNum = err:find(':(%d+):')
 		err = err:sub(last+2)
