@@ -145,7 +145,7 @@ function Script.create(name, buffer)
 
 	local fnc, err = loadstring(str)
 	
-	local suc = pcall(f)
+	local suc = pcall(fnc)
 	if not suc then
 		local _, last, lineNum = err:find(':(%d+):')
 		err = err:sub(last+2)
