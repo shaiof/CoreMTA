@@ -1,5 +1,3 @@
-message = "hello"
+local utils = require(':'..getResourceName(getThisResource())..'/addons/test2/server.lua')
 
-function outputMessage()
-	outputChatBox(message)
-end
+print(utils.round(15.2515, 2))
