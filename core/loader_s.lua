@@ -63,8 +63,24 @@ function Res.start(name)
 
 	--triggerClientEvent('onResStart', resourceRoot, {{name = name, urls = res.client}})
 	triggerEvent('onResStart', resourceRoot, res)
+
+	updateResourcesList(name)
 	
 	print(name..' sucessfully started.')
+end
+
+function updateResourcesList(name)
+	local path = 'addons/resources.json'
+	local f = File(path)
+	local list = fromJSON(f:read(f.size)) or {}
+
+	if not list[name] then
+		list[name] = {}
+	end
+
+	f:setPos(0)
+	f:write(toJSON(list))
+	f:close()
 end
 
 function Res.stop(name)
