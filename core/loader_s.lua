@@ -127,7 +127,6 @@ function Script.new(name, fileName)
 	local self = setmetatable({}, {__index = Script})
 	self.name = name:lower()
 	self.root = resources[name]
-	self.fileRoot = resources[name].server[fileName]
 	self.fileName = fileName
 	self.events = {}
 	self.cmds = {}
