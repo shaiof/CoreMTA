@@ -22,7 +22,7 @@ function Res.downloadScripts(urls, callback)
     for i=1, #urls do
 		local url = urls[i]		
         fetchRemote(url, function(data, err)
-            progress[i] = {url=url, data=data, filename=filename, err=err}
+            progress[i] = {url=url, data=data, err=err}
 
             for j=1, #urls do
                 local prog = progress[j]
@@ -39,9 +39,12 @@ function Res.downloadScripts(urls, callback)
 end
 
 function Res:loadServerScript(fileName, buffer)
-	-- get function that will run and return the script object (see Script.create)
-	local script = Script.create(self.name, fileName, buffer)
-	-- throw error if for some reason the script isn't a function
+	-- get function that will run and return the script object
+	local script, err = Script.create(self.name, fileName, buffer)
+	if err then
+		return false, err
+	end	
+
 	if not script then
 		error('error loading file', fileName, 'in', self.name)
 	end
@@ -53,6 +56,8 @@ function Res:loadServerScript(fileName, buffer)
 	script.globals = globals
 	-- store the script object in the server table in the resource object
 	self.server[fileName] = script
+
+	return true, err
 end
 
 function Res:loadExternal(files)
@@ -65,7 +70,7 @@ function Res:loadExternal(files)
 			if file.err > 0 then
 				print(i, 'error downloading file:', fileName, file.url)
 			else
-				self:loadServerScript(fileName, file.data)
+				local suc, err = self:loadServerScript(fileName, file.data) -- need to handle error here
 			end
 		end
 	end)
@@ -113,9 +118,7 @@ function Res.start(name)
 
 	Script.loadClient(name, meta.client)
 	Script.loadServer(name, meta.server)
-	--Res.loadShared(name, meta.shared)
 
-	--triggerClientEvent('onResStart', resourceRoot, {{name = name, urls = res.client}})
 	triggerEvent('onResStart', resourceRoot, res)
 
 	updateResourcesList(name)
@@ -273,9 +276,10 @@ function Script.create(name, fileName, buffer)
 	if not suc then
 		local _, lastChar, lineNum = err:find(':(%d+):')
 		err = err:sub(lastChar+2)
-		error(('%s/%s:%s: %s'):format(name, fileName, lineNum, err), 0)
+		
+		return nil, ('%s/%s:%s: %s'):format(name, fileName, lineNum, err)
 	else
-		return type(fnc) == 'function' and fnc()
+		return type(fnc) == 'function' and fnc(), err
 	end
 end
 
@@ -290,8 +294,11 @@ function Script.loadServer(name, files)
 			if File.exists(path) then
 				local f = File(path)
 				local b = f:read(f.size)
-				resources[name]:loadServerScript(fileName, b)
+				local suc, err = resources[name]:loadServerScript(fileName, b)
 				f:close()
+				if not suc then
+					error(err, 0)
+				end
 			end
 		end
 	end
