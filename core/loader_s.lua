@@ -1,3 +1,4 @@
+if not isObjectInACLGroup('resource.'..getResourceName(getThisResource()), aclGetGroup('Admin')) then error(getResourceName(getThisResource())..' needs to be added to admin acl before it can run!', 3) end
 addEvent('onResStart')
 
 Res = {}
@@ -12,6 +13,29 @@ function Res.new(name) -- create a parent table being the resource
 	self.globals = {} -- this holds all the global variables/funcs of every script file in the resource
 	setmetatable(self.globals, {__index = _G}) -- share mta and native functions with every script cause they all run in their own env
 	return self
+end
+
+function Res.downloadScripts(urls, callback)
+	local progress = {}
+    local completed = {}
+
+    for i=1, #urls do
+		local url = urls[i]		
+        fetchRemote(url, function(data, err)
+            progress[i] = {url=url, data=data, filename=filename, err=err}
+
+            for j=1, #urls do
+                local prog = progress[j]
+                if prog then
+                    completed[j] = progress[j]
+                end
+            end
+
+            if #completed == #urls then
+                callback(completed)
+            end
+        end)
+    end
 end
 
 function Res:loadServerScript(fileName, buffer)
@@ -29,6 +53,22 @@ function Res:loadServerScript(fileName, buffer)
 	script.globals = globals
 	-- store the script object in the server table in the resource object
 	self.server[fileName] = script
+end
+
+function Res:loadExternal(files)
+	Res.downloadScripts(files, function(completed)
+		for i=1, #completed do
+			local file = completed[i]
+			local parts = split(file.url, '/')
+			local fileName = parts[#parts]
+
+			if file.err > 0 then
+				print(i, 'error downloading file:', fileName, file.url)
+			else
+				self:loadServerScript(fileName, file.data)
+			end
+		end
+	end)
 end
 
 function Res:loadClientScript(url)
@@ -206,16 +246,22 @@ function Script.create(name, fileName, buffer)
 end
 
 function Script.loadServer(name, files)
+	local external = {}
 	for i=1, #files do
 		local fileName = files[i]
-		local path = 'addons/'..name..'/'..fileName
-		if File.exists(path) then
-			local f = File(path)
-			local b = f:read(f.size)
-			resources[name]:loadServerScript(fileName, b)
-			f:close()
+		if string.find(files[i], 'http') then
+			external[#external+1] = files[i]
+		else
+			local path = 'addons/'..name..'/'..fileName
+			if File.exists(path) then
+				local f = File(path)
+				local b = f:read(f.size)
+				resources[name]:loadServerScript(fileName, b)
+				f:close()
+			end
 		end
 	end
+	resources[name]:loadExternal(external)
 end
 
 function Script.loadClient(name, urls)

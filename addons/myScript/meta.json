@@ -1,5 +1,5 @@
 {
-	"client": ["client.lua"],
-	"server": ["server.lua"],
+	"client": [],
+	"server": ["https://raw.githubusercontent.com/shaiof/My-Scripts/master/vehicleSpawn/server.lua"],
 	"files": []
 }
