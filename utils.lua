@@ -10,14 +10,13 @@ function check(pattern, ...)
 end
 
 function clearTable(t)
-	check('t', t)
 	for k, v in pairs(t) do
 		if type(v) == 'userdata' and getUserdataType(v) ~= 'player' then
 			if isElement(v) or isTimer(v) then
 				v:destroy()
 			end
 		end
-		if type(v) == 'table' then
+		if type(v) == 'table' and k ~= 'root' then
 			clearTable(v)
 		end
 		t[k] = nil
