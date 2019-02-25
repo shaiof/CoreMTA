@@ -61,7 +61,7 @@ function Res.start(name)
 	Script.loadServer(name, meta.server)
 	--Res.loadShared(name, meta.shared)
 
-	triggerClientEvent('onResStart', resourceRoot, {{name = name, urls = res.client}})
+	--triggerClientEvent('onResStart', resourceRoot, {{name = name, urls = res.client}})
 	triggerEvent('onResStart', resourceRoot, res)
 	
 	print(name..' sucessfully started.')

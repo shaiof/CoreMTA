@@ -7,6 +7,7 @@ function Res.new(name)
 	local self = setmetatable({}, {__index = Res})
 	self.name = name
 	self.client = {}
+	self.showCursor = false
 	self.globals = {} -- this holds all the global variables/funcs of every script file in the resource
 	setmetatable(self.globals, {__index = _G}) -- share mta and native functions with every script cause they all run in their own env
 	return self
@@ -67,7 +68,6 @@ function Res.start(name, _, data)
 		for i=1, #localRes do
 			res:loadClientScript('', localRes[i])
 		end
-		print('test')
 		
 		triggerEvent('onClientResStart', resourceRoot, res)
 	end
@@ -106,6 +106,16 @@ function Res.stop(name)
 		resources[name] = nil
 		for i=1, 2 do collectgarbage() end
 	end
+	
+	if res.showCursor then
+		local r = Res.getAllResources()
+		for name, resor in pairs(r) do
+			if resor.showCursor == true then
+				return false
+			end
+		end
+		showCursor(false)
+	end
 end
 addEvent('onResStop', true)
 addEventHandler('onResStop', resourceRoot, Res.stop)
@@ -118,8 +128,12 @@ function Res.inspect(name)
 	end
 end
 
-function Res.get(name)
+function Res.getRoot(name)
 	return resources[name].globals
+end
+
+function Res.getAllResources()
+	return resources
 end
 
 Script = {}
@@ -132,6 +146,7 @@ function Script.new(name, fileName)
 	self.events = {}
 	self.cmds = {}
 	self.timers = {}
+	self.cursors = {}
 	self.globals = {}
 	return self
 end
@@ -150,6 +165,25 @@ end
 function Script:cmd(cmd, callback, restricted)
 	addCommandHandler(cmd, callback, restricted or false, false)
 	table.insert(self.cmds, {cmd, callback})
+end
+
+function Script:cursor(bool)
+	if type(bool) == 'boolean' then
+		if bool then
+			resources[self.name].showCursor = bool
+			return showCursor(bool)
+		end
+		
+		if not bool then
+			local res = Res.getAllResources()
+			for name, resor in pairs(res) do
+				if resor.showCursor == true then
+					return false
+				end
+			end
+			return showCursor(bool)
+		end
+	end
 end
 
 function Script:unload()
@@ -182,6 +216,7 @@ function Script.create(name, fileName, buffer)
 		{'addCommandHandler', 's:cmd'},
 		{'addEventHandler', 's:event'},
 		{'setTimer', 's:timer'},
+		{'showCursor', 's:cursor'},
 		{'onClientResourceStart', 'onClientResStart'}
 	}
 

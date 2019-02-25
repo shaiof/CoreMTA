@@ -1,7 +1,5 @@
--- function hi()
--- 	print('c')
--- end
+message = "hello"
 
-addCommandHandler('c', function()
-	hi()
-end)
+function outputMessage()
+	outputChatBox(message)
+end

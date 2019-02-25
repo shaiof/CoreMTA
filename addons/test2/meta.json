@@ -1,5 +1,5 @@
 {
-	"client": ["client.lua"],
 	"server": ["server.lua"],
+	"client": [],
 	"files": []
 }
