@@ -108,7 +108,7 @@ function Res.stop(name)
 	end
 	
 	if res.showCursor then
-		local r = Res.getAllResources()
+		local r = Res.getAll()
 		for name, resor in pairs(r) do
 			if resor.showCursor == true then
 				return false
@@ -132,7 +132,7 @@ function Res.getRoot(name)
 	return resources[name].globals
 end
 
-function Res.getAllResources()
+function Res.getAll()
 	return resources
 end
 
@@ -146,7 +146,6 @@ function Script.new(name, fileName)
 	self.events = {}
 	self.cmds = {}
 	self.timers = {}
-	self.cursors = {}
 	self.globals = {}
 	return self
 end
@@ -175,7 +174,7 @@ function Script:cursor(bool)
 		end
 		
 		if not bool then
-			local res = Res.getAllResources()
+			local res = Res.getAll()
 			for name, resor in pairs(res) do
 				if resor.showCursor == true then
 					return false
