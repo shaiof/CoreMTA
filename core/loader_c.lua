@@ -1,3 +1,5 @@
+addEvent('onClientResStart')
+
 Res = {}
 local resources = {}
 
@@ -11,6 +13,10 @@ end
 function Res:loadClientScript(fileName, buffer)
 	-- get function that will run and return the script object (see Script.create)
 	local script = Script.create(self.name, fileName, buffer)
+	-- throw error if for some reason the script isn't a function
+	if not script then
+		error('error loading file', fileName, 'in', self.name)
+	end
 	-- setup a globals table that will hold all the global vars/functions from the script file
 	local globals = {}
 	-- temporarily allow access to the Lua _G table through the globals table in order to access the global vars/functions in the script
@@ -38,28 +44,6 @@ function Res.start(clientRes)
 		local res = resources[name] or Res.new(name)
 		resources[name] = res
 
-		-- local downloaded = {}
-
-		-- for i=1, #urls do
-		-- 	local url = urls[i]
-		-- 	Script.download(url, function(data, err)
-		-- 		if err > 0 then
-		-- 			print('err', err)
-		-- 		else
-		-- 			if data then
-		-- 				downloaded[i] = {url=url,data=data})
-		-- 			end
-
-		-- 			if #downloaded == #urls then
-		-- 				for j=1, #downloaded do
-		-- 					local dl = downloaded[j]
-		-- 					res:loadClientScript(dl.url, dl.data)
-		-- 				end
-		-- 			end
-		-- 		end
-		-- 	end)
-		-- end
-
 		Res.downloadScripts(urls, function(completed)
 			for i=1, #completed do
 				local file = completed[i]
@@ -73,6 +57,7 @@ function Res.start(clientRes)
 					res:loadClientScript(fileName, file.data)
 				end
 			end
+			triggerEvent('onClientResStart', resourceRoot, res)
 		end)
 	end
 
@@ -129,12 +114,14 @@ end
 
 Script = {}
 
-function Script.new(name)
+function Script.new(name, fileName)
 	local self = setmetatable({}, {__index = Script})
 	self.name = name:lower()
+	self.fileName = fileName
 	self.events = {}
 	self.cmds = {}
 	self.timers = {}
+	self.globals = {}
 	return self
 end
 
@@ -180,20 +167,28 @@ function Script.download(url, callback)
 end
 
 function Script.create(name, fileName, buffer)
-	local str = buffer:gsub('addCommandHandler', 's:cmd')
-	str = str:gsub('addEventHandler', 's:event')
-	str = str:gsub('setTimer', 's:timer')
-	str = ('return function() local s = Script.new("%s") %s return s end'):format(name, str)
+	local gt = {
+		{'addCommandHandler', 's:cmd'},
+		{'addEventHandler', 's:event'},
+		{'setTimer', 's:timer'},
+		{'onClientResourceStart', 'onClientResStart'}
+	}
 
-	local fnc, err = loadstring(str)
+	for i=1, #gt do
+		buffer = buffer:gsub(unpack(gt[i]))
+	end
+
+	buffer = ('return function() local s = Script.new("%s", "%s") %s\nreturn s end'):format(name, fileName, buffer)
+
+	local fnc, err = loadstring(buffer)
 	
 	local suc = pcall(fnc)
 	if not suc then
-		local _, last, lineNum = err:find(':(%d+):')
-		err = err:sub(last+2)
-		error(('[%s][%s]:%s: %s'):format(name, fileName, lineNum, err), 0)
+		local _, lastChar, lineNum = err:find(':(%d+):')
+		err = err:sub(lastChar+2)
+		error(('%s/%s:%s: %s'):format(name, fileName, lineNum, err), 0)
 	else
-		return fnc()
+		return type(fnc) == 'function' and fnc()
 	end
 end
 

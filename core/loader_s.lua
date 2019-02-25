@@ -1,3 +1,5 @@
+addEvent('onResStart')
+
 Res = {}
 local resources = {}
 local clientResources = {}
@@ -7,16 +9,18 @@ function Res.new(name) -- create a parent table being the resource
 	self.name = name
 	self.server = {} -- serverside files
 	self.client = {} -- clientside files
-
 	-- self.globals = {}
 	-- self.env = setfenv(self.globals, {__index = _G})
-
 	return self
 end
 
 function Res:loadServerScript(fileName, buffer)
 	-- get function that will run and return the script object (see Script.create)
 	local script = Script.create(self.name, fileName, buffer)
+	-- throw error if for some reason the script isn't a function
+	if not script then
+		error('error loading file', fileName, 'in', self.name)
+	end
 	-- setup a globals table that will hold all the global vars/functions from the script file
 	local globals = {}
 	-- temporarily allow access to the Lua _G table through the globals table in order to access the global vars/functions in the script
@@ -61,10 +65,8 @@ function Res.start(name)
 	Script.loadServer(name, meta.server)
 	--Res.loadShared(name, meta.shared)
 
-	triggerClientEvent('onResStart', resourceRoot, {{
-		name = name,
-		urls = res.client
-	}})
+	triggerClientEvent('onResStart', resourceRoot, {{name = name, urls = res.client}})
+	triggerEvent('onResStart', resourceRoot, res)
 	
 	print(name..' sucessfully started.')
 end
@@ -121,12 +123,15 @@ end
 
 Script = {}
 
-function Script.new(name)
+function Script.new(name, fileName)
 	local self = setmetatable({}, {__index = Script})
-	self.name = name
+	self.root = resources[name]
+	self.fileName = fileName
+	self.name = name:lower()
 	self.events = {}
 	self.cmds = {}
 	self.timers = {}
+	self.globals = {}
 	return self
 end
 
@@ -140,6 +145,8 @@ function Script:unload()
 		removeCommandHandler(unpack(self.cmds[i]))
 		self.cmds[i] = nil
 	end
+
+	setmetatable(self, nil)
 
 	clearTable(self)
 end
@@ -161,21 +168,28 @@ function Script:cmd(cmd, callback, restricted)
 end
 
 function Script.create(name, fileName, buffer)
-	local str = buffer:gsub('addCommandHandler', 's:cmd')
-	str = str:gsub('addEventHandler', 's:event')
-	str = str:gsub('setTimer', 's:timer')
+	local gt = {
+		{'addCommandHandler', 's:cmd'},
+		{'addEventHandler', 's:event'},
+		{'setTimer', 's:timer'},
+		{'onResourceStart', 'onResStart'}
+	}
+	
+	for i=1, #gt do
+		buffer = buffer:gsub(unpack(gt[i]))
+	end
 
-	str = ('return function() local s = Script.new("%s") %s return s end'):format(name, str)
+	buffer = ('return function() local s = Script.new("%s", "%s") %s\nreturn s end'):format(name, fileName, buffer)
 
-	local fnc, err = loadstring(str)
+	local fnc, err = loadstring(buffer)
 	
 	local suc = pcall(fnc)
 	if not suc then
-		local _, last, lineNum = err:find(':(%d+):')
-		err = err:sub(last+2)
-		error(('[%s][%s]:%s: %s'):format(name, fileName, lineNum, err), 0)
+		local _, lastChar, lineNum = err:find(':(%d+):')
+		err = err:sub(lastChar+2)
+		error(('%s/%s:%s: %s'):format(name, fileName, lineNum, err), 0)
 	else
-		return fnc()
+		return type(fnc) == 'function' and fnc()
 	end
 end
 
