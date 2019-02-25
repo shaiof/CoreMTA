@@ -107,7 +107,7 @@ function Res.inspect(name)
 end
 
 function Res.get(name)
-	return name and resources[name]
+	return resources[name].globals
 end
 
 Script = {}
