@@ -1,5 +1,7 @@
 addCommandHandler('test', function(_, _, ...)
-	print(math.round(12.35434634626324, tonumber(arg[1])))
+	iprint(s.root)
 end)
 
-print(getFPSLimit())
+addEventHandler('onResourceStart', resourceRoot, function(res)
+	iprint(s.root)
+end)
