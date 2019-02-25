@@ -206,6 +206,7 @@ function Script.loadClient(name, urls)
 	for i=1, #urls do
 		resources[name]:loadClientScript(urls[i])
 	end
+	sendClientScripts()
 end
 
 function Script.loadShared(name, files)
@@ -213,16 +214,40 @@ function Script.loadShared(name, files)
 	Script.loadServer(name, files)
 end
 
-addEventHandler('onPlayerJoin', root, function()
+function sendClientScripts()
+	if not source then source = getElementsByType('player') end
 	local clientRes = {}
 	for name, res in pairs(resources) do
+		local external = {}
+		local localClient = {}
+		
+		for i=1, #res.client do
+			if string.find(res.client[i], 'http') then
+				external[#external+1] = res.client[i]
+			else
+				local file = File('addons/'..name..'/'..res.client[i])
+				--localClient[#localClient+1] = path
+				localClient[#localClient+1] = file:read(file.size)
+				file:close()
+			end
+		end
+		
 		table.insert(clientRes, {
 			name = name,
-			urls = res.client
+			external = external,
+			localClient = localClient
 		})
 	end
-	triggerClientEvent(source, 'onResStart', resourceRoot, clientRes)
-end)
+	
+	if type(source) == 'table' then
+		for _, plr in pairs(source) do
+			setElementData(plr, 'clientResources', clientRes)
+		end
+	else
+		setElementData(source, 'clientResources', clientRes)
+	end
+end
+addEventHandler('onPlayerJoin', root, sendClientScripts)
 
 addCommandHandler('startres', function(...) if not arg[3] then return end Res.start(arg[3]) end)
 addCommandHandler('stopres', function(...) if not arg[3] then return end Res.stop(arg[3]) end)

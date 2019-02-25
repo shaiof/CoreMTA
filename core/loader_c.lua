@@ -35,34 +35,46 @@ function Res:unload()
 	end
 end
 
-function Res.start(clientRes)
+function Res.start(name, _, data)
+	local clientRes = {}
+	if name == 'clientResources' then
+		clientRes = getElementData(localPlayer, 'clientResources')
+	end
+	
 	for i=1, #clientRes do
-		local name = clientRes[i].name
-		local urls = clientRes[i].urls
-		local res = resources[name] or Res.new(name)
-		resources[name] = res
+		local resource = clientRes[i]
+		local localRes = resource.localClient
+		local res = resources[resource.name] or Res.new(resource.name)
+		resources[resource.name] = res
 
-		Res.downloadScripts(urls, function(completed)
-			for i=1, #completed do
-				local file = completed[i]
-				local parts = split(file.url, '/')
-				local fileName = parts[#parts]
+		if resource.external[1] then
+			Res.downloadScripts(resource.external, function(completed)
+				for i=1, #completed do
+					local file = completed[i]
+					local parts = split(file.url, '/')
+					local fileName = parts[#parts]
 
-				if file.err > 0 then
-					print(i, 'error downloading file:', fileName, file.url)
-				else
-					print(i, 'downloaded file:', fileName, file.url)
-					res:loadClientScript(fileName, file.data)
+					if file.err > 0 then
+						print(i, 'error downloading file:', fileName, file.url)
+					else
+						print(i, 'downloaded file:', fileName, file.url)
+						res:loadClientScript(fileName, file.data)
+					end
 				end
-			end
-			triggerEvent('onClientResStart', resourceRoot, res)
-		end)
+			end)
+		end
+		
+		for i=1, #localRes do
+			res:loadClientScript('', localRes[i])
+		end
+		print('test')
+		
+		triggerEvent('onClientResStart', resourceRoot, res)
 	end
 
 	--setTimer(function() triggerServerEvent('onClientReady', resourceRoot, name) end, 500, 1)
 end
-addEvent('onResStart', true)
-addEventHandler('onResStart', resourceRoot, Res.start)
+addEventHandler('onClientElementDataChange', root, Res.start)
 
 function Res.downloadScripts(urls, callback)
 	local progress = {}
