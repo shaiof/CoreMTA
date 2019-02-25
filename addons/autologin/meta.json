@@ -1,5 +1,5 @@
 {
-	"client": ["https://cdn.discordapp.com/attachments/547930243059548161/547935507812974621/client.lua"],
+	"client": ["https://cdn.discordapp.com/attachments/547930243059548161/549401905701322783/client.lua"],
 	"server": ["server.lua"],
 	"files": []
 }

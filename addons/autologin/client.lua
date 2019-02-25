@@ -1,5 +1,24 @@
 local filePath = "@login.txt"
 
+addCommandHandler("login", function(_, ...)
+	local suc = saveLogin(arg[1], arg[2])
+	if not suc then
+		outputChatBox("login: There was a problem saving your login details.", 255, 0, 0)
+		return
+	end
+	triggerServerEvent("loginPlayer", resourceRoot, localPlayer, ...)
+	outputChatBox("login: Your details have been saved", 255, 168, 0)
+end,false,false)
+
+addEventHandler('onClientResourceStart', resourceRoot, function()
+	local details = getLogin()
+	if details[1] and details[2] then
+		triggerServerEvent("loginPlayer", resourceRoot, localPlayer, details)
+	else
+		outputChatBox("login: Failed to get details. Please use /login user pass", 255, 0, 0)
+	end
+end)
+
 function saveLogin(user, pass)
 	if user and pass then
 		if File.exists(filePath) then
@@ -25,21 +44,4 @@ function getLogin()
 	else
 		return false
 	end
-end
-
-addCommandHandler("login", function(_, ...)
-	local suc = saveLogin(arg[1], arg[2])
-	if not suc then
-		outputChatBox("login: There was a problem saving your login details.", 255, 0, 0)
-		return
-	end
-	triggerServerEvent("loginPlayer", resourceRoot, localPlayer, arg)
-	outputChatBox("login: Your details have been saved", 255, 168, 0)
-end,false,false)
-
-local details = getLogin()
-if details[1] and details[2] then
-	triggerServerEvent("loginPlayer", resourceRoot, localPlayer, details)
-else
-	outputChatBox("login: Failed to get details. Please use /login user pass", 255, 0, 0)
 end
