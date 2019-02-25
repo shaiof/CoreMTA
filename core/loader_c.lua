@@ -71,8 +71,6 @@ function Res.start(name, _, data)
 		
 		triggerEvent('onClientResStart', resourceRoot, res)
 	end
-
-	--setTimer(function() triggerServerEvent('onClientReady', resourceRoot, name) end, 500, 1)
 end
 addEventHandler('onClientElementDataChange', root, Res.start)
 
@@ -102,19 +100,19 @@ end
 function Res.stop(name)
 	local res = resources[name]
 	if res then
+		if res.showCursor then
+			local r = Res.getAll()
+			for name, resor in pairs(r) do
+				if resor.showCursor == true then
+					return false
+				end
+			end
+			showCursor(false)
+		end
+
 		res:unload()
 		resources[name] = nil
 		for i=1, 2 do collectgarbage() end
-	end
-	
-	if res.showCursor then
-		local r = Res.getAll()
-		for name, resor in pairs(r) do
-			if resor.showCursor == true then
-				return false
-			end
-		end
-		showCursor(false)
 	end
 end
 addEvent('onResStop', true)
@@ -134,6 +132,31 @@ end
 
 function Res.getAll()
 	return resources
+end
+
+local function getFileContents(filePath)
+	if not filePath then return end
+	if fileExists(filePath) then
+		local f = fileOpen(filePath)
+		local content = f:read(f.size)
+		f:close()
+		return content
+	end
+	return false
+end
+
+function require(filePath)
+	if type(filePath) ~= 'string' then
+		error("bad arg #1 to 'require' (string expected)", 3)
+	end
+
+	local content = getFileContents(filePath, isUrl)
+
+	if not content then
+		error("can't require '"..filePath.."' (doesn't exist)", 2)
+	end
+
+	return loadstring('return function() '..content..' end')()()
 end
 
 Script = {}

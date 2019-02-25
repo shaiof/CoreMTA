@@ -81,6 +81,20 @@ function Res:unload()
 	end
 end
 
+local function updateResourcesList(name)
+	local path = 'addons/resources.json'
+	local f = File(path)
+	local list = fromJSON(f:read(f.size)) or {}
+
+	if not list[name] then
+		list[name] = {}
+	end
+
+	f:setPos(0)
+	f:write(toJSON(list))
+	f:close()
+end
+
 function Res.start(name)
 	local name = name:lower()
 
@@ -107,20 +121,6 @@ function Res.start(name)
 	updateResourcesList(name)
 	
 	print(name..' sucessfully started.')
-end
-
-function updateResourcesList(name)
-	local path = 'addons/resources.json'
-	local f = File(path)
-	local list = fromJSON(f:read(f.size)) or {}
-
-	if not list[name] then
-		list[name] = {}
-	end
-
-	f:setPos(0)
-	f:write(toJSON(list))
-	f:close()
 end
 
 function Res.stop(name)
@@ -170,7 +170,40 @@ function Res.inspect(name)
 end
 
 function Res.get(name)
+	return resources[name]
+end
+
+function Res.getAll()
+	return resources
+end
+
+function import(resName)
 	return resources[name].globals
+end
+
+local function getFileContents(filePath)
+	if not filePath then return end
+	if fileExists(filePath) then
+		local f = fileOpen(filePath)
+		local content = f:read(f.size)
+		f:close()
+		return content
+	end
+	return false
+end
+
+function require(filePath)
+	if type(filePath) ~= 'string' then
+		error("bad arg #1 to 'require' (string expected)", 3)
+	end
+
+	local content = getFileContents(filePath)
+
+	if not content then
+		error("can't require '"..filePath.."' (doesn't exist)", 2)
+	end
+
+	return loadstring('return function() '..content..' end')()()
 end
 
 Script = {}
@@ -224,6 +257,7 @@ function Script.create(name, fileName, buffer)
 		{'addCommandHandler', 's:cmd'},
 		{'addEventHandler', 's:event'},
 		{'setTimer', 's:timer'},
+		{'Timer', 's:timer'},
 		{'onResourceStart', 'onResStart'}
 	}
 	
@@ -249,8 +283,8 @@ function Script.loadServer(name, files)
 	local external = {}
 	for i=1, #files do
 		local fileName = files[i]
-		if string.find(files[i], 'http') then
-			external[#external+1] = files[i]
+		if string.find(fileName, 'http') then
+			external[#external+1] = fileName
 		else
 			local path = 'addons/'..name..'/'..fileName
 			if File.exists(path) then
