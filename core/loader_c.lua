@@ -7,6 +7,8 @@ function Res.new(name)
 	local self = setmetatable({}, {__index = Res})
 	self.name = name
 	self.client = {}
+	self.globals = {} -- this holds all the global variables/funcs of every script file in the resource
+	setmetatable(self.globals, {__index = _G}) -- share mta and native functions with every script cause they all run in their own env
 	return self
 end
 
@@ -17,17 +19,13 @@ function Res:loadClientScript(fileName, buffer)
 	if not script then
 		error('error loading file', fileName, 'in', self.name)
 	end
-	-- setup a globals table that will hold all the global vars/functions from the script file
-	local globals = {}
-	-- temporarily allow access to the Lua _G table through the globals table in order to access the global vars/functions in the script
-	setmetatable(globals, {__index = _G})
-	-- set the environment of the script function to sandbox everything that's executed by/through it
-	setfenv(script, globals)
+	-- set the environment of the script function to sandbox everything that's executed by it
+	setfenv(script, self.globals)
 	-- execute the script function
 	script = script()
-	-- store the script's globals into the script object
+	-- store the resource's globals into the script object
 	script.globals = globals
-	-- store the script object in the server table in the resource object
+	-- store the script object in the client table in the resource object
 	self.client[fileName] = script
 end
 
