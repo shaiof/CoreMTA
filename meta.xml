@@ -8,14 +8,6 @@
    <script src="usefulFunctions/client.lua" type="client" cache="false"/>
    <script src="usefulFunctions/server.lua" type="server"/>
    
-   <script src="core/sql_s.lua" type="server"/>
-   
-   <script src="core/acc_s.lua" type="server"/>
-   <script src="core/user_s.lua" type="server"/>
-
-   <script src="core/manager_s.lua" type="server"/>
-   <script src="core/manager_c.lua" type="client" cache="false"/>
-
    <script src="core/loader_s.lua" type="server"/>
    <script src="core/loader_c.lua" type="client" cache="false"/>
 </meta>
