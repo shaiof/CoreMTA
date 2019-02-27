@@ -76,7 +76,7 @@ function Res.start(name, _, data)
 
 	triggerEvent('onClientResStart', resourceRoot, res)
 end
-addEventHandler('onClientElementDataChange', resourceRoot, Res.start)
+addEventHandler('onClientElementDataChange', root, Res.start)
 
 function Res.downloadScripts(urls, callback)
 	local progress = {}
@@ -166,12 +166,14 @@ end
 
 Script = {}
 
-local elemFuncs = {Ped, createPed, Vehicle, createVehicle, Object, createObject, Marker, createMarker}
+local elemFuncs = {'Ped', 'createPed', 'Vehicle', 'createVehicle', 'Object', 'createObject', 'Marker', 'createMarker'}
 
 function replaceFuncs()
 	for i=1, #elemFuncs do
-		Script[elemFuncs[i]] = function(...)
-			table.insert(self.elements, _G[elemFuncs[i]](...))
+		Script[elemFuncs[i]] = function(self, ...)
+			local elem = _G[elemFuncs[i]](...)
+			table.insert(self.root.elements, elem)
+			return elem
 		end
 	end
 end
