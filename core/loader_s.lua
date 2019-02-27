@@ -282,7 +282,7 @@ end
 
 function sendClientScripts()
 	if not source then source = getElementsByType('player') end
-	local clientRes = {}
+	local clientScripts = {}
 	for name, res in pairs(resources) do
 		local external = {}
 		local localClient = {}
@@ -298,7 +298,7 @@ function sendClientScripts()
 			end
 		end
 		
-		table.insert(clientRes, {
+		table.insert(clientScripts, {
 			name = name,
 			external = external,
 			localClient = localClient
@@ -308,11 +308,11 @@ function sendClientScripts()
 	if type(source) == 'table' then
 		for _, plr in pairs(source) do
 			-- if isElement(plr) and getElementType(plr) == 'player' then
-				plr:setData('clientResources', clientRes)
+				plr:setData('clientScripts', clientScripts)
 			-- end
 		end
 	else
-		source:setData('clientResources', clientRes)
+		source:setData('clientScripts', clientScripts)
 	end
 end
 addEventHandler('onPlayerJoin', root, sendClientScripts)

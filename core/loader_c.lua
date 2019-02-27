@@ -29,8 +29,6 @@ function Res:loadClientScript(fileName, buffer)
 	script.globals = globals
 	-- store the script object in the client table in the resource object
 	self.client[fileName] = script
-
-	checkElements(self.name)
 end
 
 function checkElements(name)
@@ -58,14 +56,14 @@ function Res:unload()
 end
 
 function Res.start(name, _, data)
-	local clientRes = {}
-	if name == 'clientResources' then
-		clientRes = getElementData(localPlayer, 'clientResources')
+	local clientScripts = {}
+	if name == 'clientScripts' then
+		clientScripts = getElementData(localPlayer, 'clientScripts')
 	end
 	
-	for i=1, #clientRes do
-		local resource = clientRes[i]
-		local localRes = resource.localClient
+	for i=1, #clientScripts do
+		local resource = clientScripts[i]
+		local localScripts = resource.localClient
 		local res = resources[resource.name] or Res.new(resource.name)
 		resources[resource.name] = res
 
@@ -86,14 +84,14 @@ function Res.start(name, _, data)
 			end)
 		end
 		
-		for i=1, #localRes do
-			res:loadClientScript('', localRes[i])
+		for i=1, #localScripts do
+			res:loadClientScript('', localScripts[i])
 		end
-		
-		triggerEvent('onClientResStart', resourceRoot, res)
 	end
+
+	triggerEvent('onClientResStart', resourceRoot, res)
 end
-addEventHandler('onClientElementDataChange', root, Res.start)
+addEventHandler('onClientElementDataChange', resourceRoot, Res.start)
 
 function Res.downloadScripts(urls, callback)
 	local progress = {}
@@ -183,6 +181,17 @@ end
 
 Script = {}
 
+local elemFuncs = {Ped, createPed, Vehicle, createVehicle, Object, createObject, Marker, createMarker}
+
+function replaceFuncs()
+	for i=1, #elemFuncs do
+		Script[elemFuncs[i]] = function(...)
+			table.insert(self.elements, _G[elemFuncs[i]](...))
+		end
+	end
+end
+replaceFuncs()
+
 function Script.new(name, fileName)
 	local self = setmetatable({}, {__index = Script})
 	self.name = name:lower()
@@ -253,6 +262,10 @@ function Script.create(name, fileName, buffer)
 		{'showCursor', 's:cursor'},
 		{'onClientResourceStart', 'onClientResStart'}
 	}
+
+	for i=1, #elemFuncs do
+		table.insert(gt, {elemFuncs[i], 's:'..elemFuncs[i]})
+	end
 
 	for i=1, #gt do
 		buffer = buffer:gsub(unpack(gt[i]))
