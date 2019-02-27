@@ -9,6 +9,7 @@ function Res.new(name)
 	self.client = {}
 	self.showCursor = false
 	self.globals = {} -- this holds all the global variables/funcs of every script file in the resource
+	self.elements = {}
 	setmetatable(self.globals, {__index = _G}) -- share mta and native functions with every script cause they all run in their own env
 	return self
 end
@@ -28,16 +29,35 @@ function Res:loadClientScript(fileName, buffer)
 	script.globals = globals
 	-- store the script object in the client table in the resource object
 	self.client[fileName] = script
+
+	checkElements(self.name)
+end
+
+function checkElements(name)
+	local types = {"ped","water","sound","vehicle","object","pickup","marker","colshape","blip","radararea","team","spawnpoint","console","projectile","effect","light","searchlight","shader","texture",}
+	local resElems = {}
+	for i=1, #types do
+		local elems = getElementsByType(types[i], resourceRoot)
+		for _, elem in pairs(elems) do
+			if not elem:getData('resourceName') then
+				elem:setData('resourceName', name)
+				resElems[#resElems+1] = elem
+			end
+		end
+		resources[name].elements = resElems
+	end
 end
 
 function Res:unload()
 	for fileName, script in pairs(self.client) do
 		script:unload()
 	end
+	for i=1, #self.elements do
+		self.elements[i]:destroy()
+	end
 end
 
 function Res.start(name, _, data)
-	print(1)
 	local clientRes = {}
 	if name == 'clientResources' then
 		clientRes = getElementData(localPlayer, 'clientResources')

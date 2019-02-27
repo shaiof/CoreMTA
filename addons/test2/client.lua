@@ -1,0 +1,1 @@
+Ped(21, localPlayer.position)

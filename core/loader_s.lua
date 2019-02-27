@@ -307,9 +307,9 @@ function sendClientScripts()
 	
 	if type(source) == 'table' then
 		for _, plr in pairs(source) do
-			if isElement(plr) and getElementType(plr) == 'player' then
+			-- if isElement(plr) and getElementType(plr) == 'player' then
 				plr:setData('clientResources', clientRes)
-			end
+			-- end
 		end
 	else
 		source:setData('clientResources', clientRes)
