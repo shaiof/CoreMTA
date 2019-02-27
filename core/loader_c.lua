@@ -31,21 +31,6 @@ function Res:loadClientScript(fileName, buffer)
 	self.client[fileName] = script
 end
 
-function checkElements(name)
-	local types = {"ped","water","sound","vehicle","object","pickup","marker","colshape","blip","radararea","team","spawnpoint","console","projectile","effect","light","searchlight","shader","texture",}
-	local resElems = {}
-	for i=1, #types do
-		local elems = getElementsByType(types[i], resourceRoot)
-		for _, elem in pairs(elems) do
-			if not elem:getData('resourceName') then
-				elem:setData('resourceName', name)
-				resElems[#resElems+1] = elem
-			end
-		end
-		resources[name].elements = resElems
-	end
-end
-
 function Res:unload()
 	for fileName, script in pairs(self.client) do
 		script:unload()
