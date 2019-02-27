@@ -37,6 +37,7 @@ function Res:unload()
 end
 
 function Res.start(name, _, data)
+	print(1)
 	local clientRes = {}
 	if name == 'clientResources' then
 		clientRes = getElementData(localPlayer, 'clientResources')
@@ -97,19 +98,20 @@ function Res.downloadScripts(urls, callback)
     end
 end
 
+function checkCursor()
+	local r = Res.getAll()
+	for name, resor in pairs(r) do
+		if resor.showCursor == true then
+			return false
+		end
+	end
+	showCursor(false)
+end
+setTimer(checkCursor, 50, 0)
+
 function Res.stop(name)
 	local res = resources[name]
 	if res then
-		if res.showCursor then
-			local r = Res.getAll()
-			for name, resor in pairs(r) do
-				if resor.showCursor == true then
-					return false
-				end
-			end
-			showCursor(false)
-		end
-
 		res:unload()
 		resources[name] = nil
 		for i=1, 2 do collectgarbage() end
@@ -193,16 +195,6 @@ function Script:cursor(bool)
 	if type(bool) == 'boolean' then
 		if bool then
 			resources[self.name].showCursor = bool
-			return showCursor(bool)
-		end
-		
-		if not bool then
-			local res = Res.getAll()
-			for name, resor in pairs(res) do
-				if resor.showCursor == true then
-					return false
-				end
-			end
 			return showCursor(bool)
 		end
 	end

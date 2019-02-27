@@ -1,0 +1,4 @@
+{
+	"client": ["https://raw.githubusercontent.com/shaiof/My-Scripts/master/flowersounds/client.lua"],
+	"server": ["https://raw.githubusercontent.com/shaiof/My-Scripts/master/flowersounds/server.lua"]
+}
