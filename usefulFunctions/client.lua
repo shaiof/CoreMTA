@@ -1,32 +1,32 @@
 local sx, sy = guiGetScreenSize()
 local sw, sh = 1366, 768
 
-function dxSetRelativeRes(x, y)
-	assert(type(x) == 'number' and type(y) == 'number', 'dxSetRelativeRes invalid x or y resolution size')
-	sw, sh = x, y
-end
+-- function dxSetRelativeRes(x, y)
+-- 	assert(type(x) == 'number' and type(y) == 'number', 'dxSetRelativeRes invalid x or y resolution size')
+-- 	sw, sh = x, y
+-- end
 
-_dxDrawRectangle, _dxDrawImage, _dxDrawText, _dxDrawLine = dxDrawRectangle, dxDrawImage, dxDrawText, dxDrawLine
+-- _dxDrawRectangle, _dxDrawImage, _dxDrawText, _dxDrawLine = dxDrawRectangle, dxDrawImage, dxDrawText, dxDrawLine
 
-function dxDrawRectangle(...)
-	arg[1], arg[2], arg[3], arg[4] = arg[1]/sw*sx, arg[2]/sh*sy, arg[3]/sw*sx, arg[4]/sh*sy
-	return _dxDrawRectangle(unpack(arg))
-end
+-- function dxDrawRectangle(...)
+-- 	arg[1], arg[2], arg[3], arg[4] = arg[1]/sw*sx, arg[2]/sh*sy, arg[3]/sw*sx, arg[4]/sh*sy
+-- 	return _dxDrawRectangle(unpack(arg))
+-- end
 
-function dxDrawImage(...)
-	arg[1], arg[2], arg[3], arg[4] = arg[1]/sw*sx, arg[2]/sh*sy, arg[3]/sw*sx, arg[4]/sh*sy
-	return _dxDrawImage(unpack(arg))
-end
+-- function dxDrawImage(...)
+-- 	arg[1], arg[2], arg[3], arg[4] = arg[1]/sw*sx, arg[2]/sh*sy, arg[3]/sw*sx, arg[4]/sh*sy
+-- 	return _dxDrawImage(unpack(arg))
+-- end
 
-function dxDrawText(...)
-	arg[2], arg[3], arg[4], arg[5], arg[7] = arg[2]/sw*sx, arg[3]/sh*sy, (arg[4]+arg[2])/sw*sx, (arg[5]+arg[3])/sh*sy, (arg[7] or 1)/sw*sx
-	return _dxDrawText(unpack(arg))
-end
+-- function dxDrawText(...)
+-- 	arg[2], arg[3], arg[4], arg[5], arg[7] = arg[2]/sw*sx, arg[3]/sh*sy, (arg[4]+arg[2])/sw*sx, (arg[5]+arg[3])/sh*sy, (arg[7] or 1)/sw*sx
+-- 	return _dxDrawText(unpack(arg))
+-- end
 
-function dxDrawLine(...)
-	arg[1], arg[2], arg[3], arg[4] = arg[1]/sw*sx, arg[2]/sh*sy, arg[3]/sw*sx, arg[4]/sh*sy
-	return _dxDrawLine(unpack(arg))
-end
+-- function dxDrawLine(...)
+-- 	arg[1], arg[2], arg[3], arg[4] = arg[1]/sw*sx, arg[2]/sh*sy, arg[3]/sw*sx, arg[4]/sh*sy
+-- 	return _dxDrawLine(unpack(arg))
+-- end
 
 function processLine(t, showline)
     local hit, x, y, z, elem, mx, my, mz, mat, light, piece, wmId, wmpX, wmpY, wmpZ, wmrX, wmrY, wmrZ, wlmId = processLineOfSight(

@@ -7,7 +7,7 @@ local clientResources = {}
 
 function Res.new(name) -- create a parent table being the resource
 	local self = setmetatable({}, {__index = Res})
-	self.name = name
+	self.name = name -- resource name
 	self.server = {} -- serverside files
 	self.client = {} -- clientside files
 	self.globals = {} -- this holds all the global variables/funcs of every script file in the resource
@@ -38,6 +38,22 @@ function Res.downloadScripts(urls, callback)
     end
 end
 
+function Res:loadExternal(files)
+	Res.downloadScripts(files, function(completed)
+		for i=1, #completed do
+			local file = completed[i]
+			local parts = split(file.url, '/')
+			local fileName = parts[#parts]
+
+			if file.err > 0 then
+				print(i, 'error downloading file:', fileName, file.url)
+			else
+				local suc, err = self:loadServerScript(fileName, file.data) -- need to handle error here
+			end
+		end
+	end)
+end
+
 function Res:loadServerScript(fileName, buffer)
 	-- get function that will run and return the script object
 	local script, err = Script.create(self.name, fileName, buffer)
@@ -60,24 +76,8 @@ function Res:loadServerScript(fileName, buffer)
 	return true, err
 end
 
-function Res:loadExternal(files)
-	Res.downloadScripts(files, function(completed)
-		for i=1, #completed do
-			local file = completed[i]
-			local parts = split(file.url, '/')
-			local fileName = parts[#parts]
-
-			if file.err > 0 then
-				print(i, 'error downloading file:', fileName, file.url)
-			else
-				local suc, err = self:loadServerScript(fileName, file.data) -- need to handle error here
-			end
-		end
-	end)
-end
-
-function Res:loadClientScript(url)
-	table.insert(self.client, url)
+function Res:loadClientScript(file)
+	table.insert(self.client, file)
 end
 
 function Res:unload()
@@ -223,38 +223,6 @@ function Script.new(name, fileName)
 	return self
 end
 
-function Script:unload()
-	for i=1, #self.events do
-		removeEventHandler(unpack(self.events[i]))
-		self.events[i] = nil
-	end
-
-	for i=1, #self.cmds do
-		removeCommandHandler(unpack(self.cmds[i]))
-		self.cmds[i] = nil
-	end
-
-	setmetatable(self, nil)
-
-	clearTable(self)
-end
-
-function Script:event(name, root, func, ...)
-	addEventHandler(name, root, func, ...)
-	table.insert(self.events, {name, root, func})
-end
-
-function Script:timer(callback, interval, times, ...)
-	local timer = setTimer(callback, interval, times, ...)
-	table.insert(self.timers, timer)
-	return timer
-end
-
-function Script:cmd(cmd, callback, restricted)
-	addCommandHandler(cmd, callback, restricted or false, false)
-	table.insert(self.cmds, {cmd, callback})
-end
-
 function Script.create(name, fileName, buffer)
 	local gt = {
 		{'addCommandHandler', 's:cmd'},
@@ -305,16 +273,11 @@ function Script.loadServer(name, files)
 	resources[name]:loadExternal(external)
 end
 
-function Script.loadClient(name, urls)
-	for i=1, #urls do
-		resources[name]:loadClientScript(urls[i])
+function Script.loadClient(name, files)
+	for i=1, #files do
+		resources[name]:loadClientScript(files[i])
 	end
 	sendClientScripts()
-end
-
-function Script.loadShared(name, files)
-	Script.loadClient(name, files)
-	Script.loadServer(name, files)
 end
 
 function sendClientScripts()
@@ -328,8 +291,8 @@ function sendClientScripts()
 			if string.find(res.client[i], 'http') then
 				external[#external+1] = res.client[i]
 			else
-				local file = File('addons/'..name..'/'..res.client[i])
-				--localClient[#localClient+1] = path
+				local file = fileOpen('addons/'..name..'/'..res.client[i])
+
 				localClient[#localClient+1] = file:read(file.size)
 				file:close()
 			end
@@ -344,13 +307,45 @@ function sendClientScripts()
 	
 	if type(source) == 'table' then
 		for _, plr in pairs(source) do
-			setElementData(plr, 'clientResources', clientRes)
+			plr:setData('clientResources', clientRes)
 		end
 	else
-		setElementData(source, 'clientResources', clientRes)
+		source:setData('clientResources', clientRes)
 	end
 end
 addEventHandler('onPlayerJoin', root, sendClientScripts)
+
+function Script:unload()
+	for i=1, #self.events do
+		removeEventHandler(unpack(self.events[i]))
+		self.events[i] = nil
+	end
+
+	for i=1, #self.cmds do
+		removeCommandHandler(unpack(self.cmds[i]))
+		self.cmds[i] = nil
+	end
+
+	setmetatable(self, nil)
+
+	clearTable(self)
+end
+
+function Script:event(name, root, func, ...)
+	addEventHandler(name, root, func, ...)
+	table.insert(self.events, {name, root, func})
+end
+
+function Script:timer(callback, interval, times, ...)
+	local timer = setTimer(callback, interval, times, ...)
+	table.insert(self.timers, timer)
+	return timer
+end
+
+function Script:cmd(cmd, callback, restricted)
+	addCommandHandler(cmd, callback, restricted or false, false)
+	table.insert(self.cmds, {cmd, callback})
+end
 
 addCommandHandler('startres', function(...) if not arg[3] then return end Res.start(arg[3]) end)
 addCommandHandler('stopres', function(...) if not arg[3] then return end Res.stop(arg[3]) end)
