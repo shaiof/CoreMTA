@@ -18,9 +18,7 @@ function Res:loadClientScript(fileName, buffer)
 	-- get function that will run and return the script object (see Script.create)
 	local script = Script.create(self.name, fileName, buffer)
 	-- throw error if for some reason the script isn't a function
-	if not script then
-		error('error loading file', fileName, 'in', self.name)
-	end
+	if not script then error('error loading file', fileName, 'in', self.name) end
 	-- set the environment of the script function to sandbox everything that's executed by it
 	setfenv(script, self.globals)
 	-- execute the script function
@@ -35,6 +33,7 @@ function Res:unload()
 	for fileName, script in pairs(self.client) do
 		script:unload()
 	end
+	iprint('[client] deleting elements in resource: ', self.name, self.elements)
 	for i=1, #self.elements do
 		self.elements[i]:destroy()
 	end
@@ -78,6 +77,17 @@ function Res.start(name, _, data)
 end
 addEventHandler('onClientElementDataChange', root, Res.start)
 
+function Res.stop(name)
+	local res = resources[name]
+	if res then
+		res:unload()
+		resources[name] = nil
+		for i=1, 2 do collectgarbage() end
+	end
+end
+addEvent('onResStop', true)
+addEventHandler('onResStop', resourceRoot, Res.stop)
+
 function Res.downloadScripts(urls, callback)
 	local progress = {}
     local completed = {}
@@ -112,16 +122,7 @@ function checkCursor()
 end
 setTimer(checkCursor, 50, 0)
 
-function Res.stop(name)
-	local res = resources[name]
-	if res then
-		res:unload()
-		resources[name] = nil
-		for i=1, 2 do collectgarbage() end
-	end
-end
-addEvent('onResStop', true)
-addEventHandler('onResStop', resourceRoot, Res.stop)
+
 
 function Res.inspect(name)
 	local name = name:lower()
@@ -165,19 +166,6 @@ function require(filePath)
 end
 
 Script = {}
-
-local elemFuncs = {'Ped', 'createPed', 'Vehicle', 'createVehicle', 'Object', 'createObject', 'Marker', 'createMarker'}
-
-function replaceFuncs()
-	for i=1, #elemFuncs do
-		Script[elemFuncs[i]] = function(self, ...)
-			local elem = _G[elemFuncs[i]](...)
-			table.insert(self.root.elements, elem)
-			return elem
-		end
-	end
-end
-replaceFuncs()
 
 function Script.new(name, fileName)
 	local self = setmetatable({}, {__index = Script})
@@ -241,6 +229,18 @@ function Script.download(url, callback)
 	end)
 end
 
+function Script:replaceFuncs()
+	local elemFuncs = {'Ped', 'createPed', 'Vehicle', 'createVehicle', 'Object', 'createObject', 'Marker', 'createMarker', 'Sound', 'playSound', 'playSound3D'}
+	for i=1, #elemFuncs do
+		local origFunc = self.root.globals[elemFuncs[i]]
+		self.root.globals[elemFuncs[i]] = function(...)
+			local elem = origFunc(...)
+			table.insert(self.root.elements, elem)
+			return elem
+		end
+	end
+end
+
 function Script.create(name, fileName, buffer)
 	local gt = {
 		{'addCommandHandler', 's:cmd'},
@@ -250,15 +250,11 @@ function Script.create(name, fileName, buffer)
 		{'onClientResourceStart', 'onClientResStart'}
 	}
 
-	for i=1, #elemFuncs do
-		table.insert(gt, {elemFuncs[i], 's:'..elemFuncs[i]})
-	end
-
 	for i=1, #gt do
 		buffer = buffer:gsub(unpack(gt[i]))
 	end
 
-	buffer = ('return function() local s = Script.new("%s", "%s") %s\nreturn s end'):format(name, fileName, buffer)
+	buffer = ('return function() local s = Script.new("%s", "%s"); s:replaceFuncs(); %s\nreturn s end'):format(name, fileName, buffer)
 
 	local fnc, err = loadstring(buffer)
 	
