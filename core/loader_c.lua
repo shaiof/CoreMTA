@@ -175,6 +175,8 @@ function Script.new(name, fileName)
 	self.events = {}
 	self.cmds = {}
 	self.timers = {}
+	self.dffs = {}
+	self.cols = {}
 	self.globals = {}
 	return self
 end
