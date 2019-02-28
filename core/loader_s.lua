@@ -281,39 +281,41 @@ function Script.loadClient(name, files)
 end
 
 function sendClientScripts()
-	if not source then source = getElementsByType('player') end
-	local clientScripts = {}
-	for name, res in pairs(resources) do
-		local external = {}
-		local localClient = {}
-		
-		for i=1, #res.client do
-			if string.find(res.client[i], 'http') then
-				external[#external+1] = res.client[i]
-			else
-				local file = fileOpen('addons/'..name..'/'..res.client[i])
+    if not source then source = getElementsByType('player') end
+    local clientScripts = {}
+    
+    for name, res in pairs(resources) do
+        if not res.clientLoaded then
+            local external = {}
+            local localClient = {}
+            for i=1, #res.client do
+                if string.find(res.client[i], 'http') then
+                    external[#external+1] = res.client[i]
+                else
+                    local file = fileOpen('addons/'..name..'/'..res.client[i])
 
-				localClient[#localClient+1] = file:read(file.size)
-				file:close()
-			end
-		end
-		
-		table.insert(clientScripts, {
-			name = name,
-			external = external,
-			localClient = localClient
-		})
-	end
-	
-	if type(source) == 'table' then
-		for _, plr in pairs(source) do
-			-- if isElement(plr) and getElementType(plr) == 'player' then
-				plr:setData('clientScripts', clientScripts)
-			-- end
-		end
-	else
-		source:setData('clientScripts', clientScripts)
-	end
+                    localClient[#localClient+1] = file:read(file.size)
+                    file:close()
+                end
+            end
+            table.insert(clientScripts, {
+                name = name,
+                external = external,
+                localClient = localClient
+            })
+            res.clientLoaded = true
+        end
+    end
+    
+    if type(source) == 'table' then
+        for _, plr in pairs(source) do
+            -- if isElement(plr) and getElementType(plr) == 'player' then
+                plr:setData('clientScripts', clientScripts)
+            -- end
+        end
+    else
+        source:setData('clientScripts', clientScripts)
+    end
 end
 addEventHandler('onPlayerJoin', root, sendClientScripts)
 
