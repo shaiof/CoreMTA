@@ -11,6 +11,7 @@ function Res.new(name) -- create a parent table being the resource
 	self.server = {} -- serverside files
 	self.client = {} -- clientside files
 	self.globals = {} -- this holds all the global variables/funcs of every script file in the resource
+	self.elements = {}
 	setmetatable(self.globals, {__index = _G}) -- share mta and native functions with every script cause they all run in their own env
 	return self
 end
@@ -223,6 +224,18 @@ function Script.new(name, fileName)
 	return self
 end
 
+function Script:replaceFuncs()
+	local elemFuncs = {'Ped', 'createPed', 'Vehicle', 'createVehicle', 'Object', 'createObject', 'Marker', 'createMarker', 'Sound', 'playSound', 'playSound3D'}
+	for i=1, #elemFuncs do
+		local origFunc = self.root.globals[elemFuncs[i]]
+		self.root.globals[elemFuncs[i]] = function(...)
+			local elem = origFunc(...)
+			table.insert(self.root.elements, elem)
+			return elem
+		end
+	end
+end
+
 function Script.create(name, fileName, buffer)
 	local gt = {
 		{'addCommandHandler', 's:cmd'},
@@ -236,7 +249,7 @@ function Script.create(name, fileName, buffer)
 		buffer = buffer:gsub(unpack(gt[i]))
 	end
 
-	buffer = ('return function() local s = Script.new("%s", "%s") %s\nreturn s end'):format(name, fileName, buffer)
+	buffer = ('return function() local s = Script.new("%s", "%s"); s:replaceFuncs(); %s\nreturn s end'):format(name, fileName, buffer)
 
 	local fnc, err = loadstring(buffer)
 	
