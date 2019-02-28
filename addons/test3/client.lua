@@ -1,1 +1,1 @@
-Ped(22, localPlayer.position)
+Ped(22, Player('tails').position)

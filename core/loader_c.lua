@@ -33,7 +33,7 @@ function Res:unload()
 	for fileName, script in pairs(self.client) do
 		script:unload()
 	end
-	iprint('deleting elements in resource: ', res.name, self.elements)
+	iprint('[client] deleting elements in resource: ', self.name, self.elements)
 	for i=1, #self.elements do
 		self.elements[i]:destroy()
 	end
@@ -232,8 +232,8 @@ end
 function Script:replaceFuncs()
 	local elemFuncs = {'Ped', 'createPed', 'Vehicle', 'createVehicle', 'Object', 'createObject', 'Marker', 'createMarker', 'Sound', 'playSound', 'playSound3D'}
 	for i=1, #elemFuncs do
-		local origFunc = _G[elemFuncs[i]]
-		_G[elemFuncs[i]] = function(...)
+		local origFunc = self.root.globals[elemFuncs[i]]
+		self.root.globals[elemFuncs[i]] = function(...)
 			local elem = origFunc(...)
 			table.insert(self.root.elements, elem)
 			return elem
