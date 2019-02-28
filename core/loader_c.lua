@@ -200,7 +200,7 @@ end
 function Script:loadCOL(...)
 	local col = engineLoadCOL(arg[2])
 	if col then
-		engineReplaceCOL(col, arg[1]
+		engineReplaceCOL(col, arg[1])
 		table.insert(self.cols, {id = arg[1], col = col})
 	end
 end
