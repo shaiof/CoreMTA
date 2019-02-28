@@ -195,6 +195,22 @@ function Script:cmd(cmd, callback, restricted)
 	table.insert(self.cmds, {cmd, callback})
 end
 
+function Script:loadCOL(...)
+	local col = engineLoadCOL(arg[2])
+	if col then
+		engineReplaceCOL(col, arg[1]
+		table.insert(self.cols, {id = arg[1], col = col})
+	end
+end
+
+function Script:loadDFF(...)
+	local dff = engineLoadDFF(arg[2])
+	if dff then
+		engineReplaceModel(dff, arg[1])
+		table.insert(self.dffs, {id = arg[1], dff = dff})
+	end
+end
+
 function Script:cursor(bool)
 	if type(bool) == 'boolean' then
 		if bool then
@@ -213,6 +229,16 @@ function Script:unload()
 	for i=1, #self.cmds do
 		removeCommandHandler(unpack(self.cmds[i]))
 		self.cmds[i] = nil
+	end
+	
+	for i=1, #self.cols do
+		engineRestoreCOL(self.cols[i].id)
+		self.cols[i] = nil
+	end
+	
+	for i=1, #self.dffs do
+		engineRestoreModel(self.dffs[i].id)
+		self.dffs[i] = nil
 	end
 
 	clearTable(self)
@@ -246,6 +272,15 @@ function Script.create(name, fileName, buffer)
 		{'addCommandHandler', 's:cmd'},
 		{'addEventHandler', 's:event'},
 		{'setTimer', 's:timer'},
+		{'Timer', 's:timer'},
+		{'engineLoadCOL', 'engineReplaceCOL'},
+		{'engineLoadModel', 'engineReplaceModel'},
+		{'EngineCOL', 'engineReplaceCOL'},
+		{'EngineDFF', 'engineReplaceModel'},
+		{'col:replace', 'engineReplaceCOL'},
+		{'dff:replace', 'engineReplaceModel'},
+		{'engineReplaceCOL', 's:loadCOL'},
+		{'engineReplaceModel', 's:loadDFF'},
 		{'showCursor', 's:cursor'},
 		{'onClientResourceStart', 'onClientResStart'}
 	}
