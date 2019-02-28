@@ -10,6 +10,7 @@ function Res.new(name)
 	self.showCursor = false
 	self.globals = {} -- this holds all the global variables/funcs of every script file in the resource
 	self.elements = {}
+	self.files = {}
 	setmetatable(self.globals, {__index = _G}) -- share mta and native functions with every script cause they all run in their own env
 	return self
 end
@@ -40,9 +41,23 @@ function Res:unload()
 end
 
 function Res.start(name, _, data)
+	if name == 'fileBuffer' then
+		local file = localPlayer:getData('fileBuffer')
+		local f = File('addons/'..file.name..'/'..file.path)
+		f:setPos(f.size)
+		f:write(file.buf)
+		f:flush()
+
+		if file.done then
+			f:close()
+			print(file.path, 'done')
+		end
+	end
+	
+
 	local clientScripts = {}
 	if name == 'clientScripts' then
-		clientScripts = getElementData(localPlayer, 'clientScripts')
+		clientScripts = localPlayer:getData('clientScripts')
 	end
 	
 	for i=1, #clientScripts do

@@ -1,5 +1,5 @@
 {
 	"server": [],
 	"client": ["client.lua"],
-	"files": []
+	"files": ["screenshot.png", "testfile.txt"]
 }
