@@ -44,16 +44,24 @@ function Res.start(name, _, data)
 	if name == 'fileBuffer' then
 		local file = localPlayer:getData('fileBuffer')
 		local f = File('addons/'..file.name..'/'..file.path)
-		f:setPos(f.size)
 		f:write(file.buf)
-		f:flush()
+		f:close()
 
 		if file.done then
+			f = fileOpen('addons/'..file.name..'/'..file.path)
+			local ext = split(file.path, '.')
+
+			if ext[#ext] == 'png' then
+				local buf = f:read(f.size)
+				local newPix = dxConvertPixels('png')
+				f:setPos(0)
+				f:write(newPix)
+			end
 			f:close()
 			print(file.path, 'done')
 		end
 	end
-	
+
 
 	local clientScripts = {}
 	if name == 'clientScripts' then

@@ -268,20 +268,16 @@ end
 function Script.loadFiles(name, files)
 	for i=1, #files do
 		local f = fileOpen('addons/'..name..'/'..files[i])
-		local buf
-		local size = f.size
-		local bufSize = size/1024/1024 < 5 and size or 1*1024*1024
-		while not fileIsEOF(f) do
-			buf = f:read(1*1024*1024)
-			for _,plr in pairs(getElementsByType('player')) do
-				plr:setData('fileBuffer', {
-					path = files[i],
-					buf = buf,
-					name = name,
-					done = fileIsEOF(f)
-				})
-			end
+		local buf = f:read(f.size)
+		for _,plr in pairs(getElementsByType('player')) do
+			plr:setData('fileBuffer', {
+				path = files[i],
+				buf = buf,
+				name = name,
+				done = fileIsEOF(f)
+			})
 		end
+		f:close()
 	end
 end
 
