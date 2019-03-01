@@ -8,8 +8,8 @@ local clientResources = {}
 function Res.new(name) -- create a parent table being the resource
 	local self = setmetatable({}, {__index = Res})
 	self.name = name -- resource name
-	self.server = {} -- serverside files
-	self.client = {} -- clientside files
+	self.server = {} -- serverside scripts
+	self.meta = {} -- list meta contents
 	self.globals = {} -- this holds all the global variables/funcs of every script file in the resource
 	self.elements = {}
 	setmetatable(self.globals, {__index = _G}) -- share mta and native functions with every script cause they all run in their own env
@@ -77,10 +77,6 @@ function Res:loadServerScript(fileName, buffer)
 	return true, err
 end
 
-function Res:loadClientScript(file)
-	table.insert(self.client, file)
-end
-
 function Res:unload()
 	for fileName, script in pairs(self.server) do
 		script:unload()
@@ -116,11 +112,11 @@ function Res.start(name)
 
 	local res = Res.new(name)
 	resources[name] = res
+	res.meta = meta
 
-	Script.loadClient(name, meta.client)
+	Script.loadClient(name, meta)
 	Script.loadServer(name, meta.server)
-	Script.loadFiles(name, meta.files)
-
+	
 	triggerEvent('onResStart', resourceRoot, res)
 
 	updateResourcesList(name)
@@ -182,13 +178,12 @@ function Res.getAll()
 	return resources
 end
 
-function import(resName)
+function import(name)
 	return resources[name].globals
 end
 
 local function getFileContents(filePath)
-	if not filePath then return end
-	if fileExists(filePath) then
+	if filePath and fileExists(filePath) then
 		local f = fileOpen(filePath)
 		local content = f:read(f.size)
 		f:close()
@@ -225,18 +220,6 @@ function Script.new(name, fileName)
 	return self
 end
 
-function Script:replaceFuncs()
-	local elemFuncs = {'Ped', 'createPed', 'Vehicle', 'createVehicle', 'Object', 'createObject', 'Marker', 'createMarker', 'Sound', 'playSound', 'playSound3D', 'Pickup', 'createPickup', 'createColCircle', 'ColShape.Circle', 'createColCuboid', 'ColShape.Cuboid', 'createColPolygon', 'ColShape.Polygon', 'createColRectangle', 'ColShape.Rectangle', 'createColSphere', 'ColShape.Sphere', 'createColTube', 'ColShape.Tube', 'createBlip', 'Blip', 'createBlipAttachedTo', 'Blip.createAttachedTo', 'createRadarArea', 'RadarArea', 'Sound', 'Sound3D', 'playSFX', 'playSFX3D', 'createProjectile', 'Projectile', 'createTeam', 'Team.create', 'guiCreateFont', 'GuiFont', 'guiCreateBrowser', 'GuiBrowser', 'guiCreateButton', 'GuiButton', 'guiCreateCheckBox', 'GuiCheckBox', 'guiCreateComboBox', 'GuiComboBox', 'guiCreateEdit', 'GuiEdit', 'guiCreateGridList', 'GuiGridList', 'guiCreateMemo', 'GuiMemo', 'guiCreateProgressBar', 'GuiProgressBar', 'guiCreateRadioButton', 'GuiRadioButton', 'guiCreateScrollBar', 'GuiScrollBar', 'guiCreateScrollPane', 'GuiScrollPane', 'guiCreateStaticImage', 'GuiStaticImage', 'guiCreateTabPanel', 'GuiTabPanel', 'guiCreateTab', 'GuiTab', 'guiCreateLabel', 'GuiLabel', 'guiCreateWindow', 'GuiWindow', 'dxCreateTexture', 'DxTexture', 'dxCreateRenderTarget', 'DxRenderTarget', 'dxCreateScreenSource', 'DxScreenSource', 'dxCreateShader', 'DxShader', 'dxCreateFont', 'DxFont', 'createWeapon', 'Weapon', 'createEffect', 'Effect', 'Browser', 'createBrowser', 'createLight', 'Light', 'createSearchLight', 'SearchLight', 'createWater', 'Water'}
-	for i=1, #elemFuncs do
-		local origFunc = self.root.globals[elemFuncs[i]]
-		self.root.globals[elemFuncs[i]] = function(...)
-			local elem = origFunc(...)
-			table.insert(self.root.elements, elem)
-			return elem
-		end
-	end
-end
-
 function Script.create(name, fileName, buffer)
 	local gt = {
 		{'addCommandHandler', 's:cmd'},
@@ -265,21 +248,53 @@ function Script.create(name, fileName, buffer)
 	end
 end
 
-function Script.loadFiles(name, files)
-	for i=1, #files do
-		local f = fileOpen('addons/'..name..'/'..files[i])
-		local buf = f:read(f.size)
-		for _,plr in pairs(getElementsByType('player')) do
-			plr:setData('fileBuffer', {
-				path = files[i],
-				buf = buf,
-				name = name,
-				done = fileIsEOF(f)
-			})
+function Script.loadClient(name, meta, player)
+	local target = player or root
+
+	-- send files
+	for i=1, #meta.files do
+		local data = {
+			resourceName = name,
+			path = 'addons/'..name..'/'..meta.files[i]
+		}
+
+		if meta.files[i]:find('http') then
+			data.url = meta.files[i]
+		else
+			local f = fileOpen(data.path)
+			data.buf = f:read(f.size)
+			f:close()
 		end
-		f:close()
+
+		print(meta.files[i])
+
+		triggerClientEvent(target, 'sendFile', resourceRoot, data)
+	end
+
+	-- send scripts
+	for i=1, #meta.client do
+		local data = {
+			resourceName = name,
+			path = 'addons/'..name..'/'..meta.client[i]
+		}
+
+		if meta.client[i]:find('http') then
+			data.url = meta.client[i]
+		else
+			local f = fileOpen(data.path)
+			data.buf = f:read(f.size)
+			f:close()
+		end
+
+		triggerClientEvent(target, 'sendScript', resourceRoot, data)
 	end
 end
+
+addEventHandler('onPlayerJoin', root, function()
+	for name, res in pairs(resources) do
+		Script.loadClient(name, res.meta, source)
+	end
+end)
 
 function Script.loadServer(name, files)
 	local external = {}
@@ -303,51 +318,60 @@ function Script.loadServer(name, files)
 	resources[name]:loadExternal(external)
 end
 
-function Script.loadClient(name, files)
-	for i=1, #files do
-		resources[name]:loadClientScript(files[i])
-	end
-	sendClientScripts()
-end
+-- function Script.loadFiles(name, files)
+-- 	for i=1, #files do
+-- 		local f = fileOpen('addons/'..name..'/'..files[i])
+-- 		local buf = f:read(f.size)
+-- 		for _,plr in pairs(getElementsByType('player')) do
+-- 			plr:setData('fileBuffer', {
+-- 				path = files[i],
+-- 				buf = base64Encode(buf),
+-- 				name = name,
+-- 				done = fileIsEOF(f)
+-- 			})
+-- 		end
+-- 		f:close()
+-- 	end
+-- end
 
-function sendClientScripts()
-    if not source then source = getElementsByType('player') end
-    local clientScripts = {}
+-- function sendClientScripts()
+--     if not source then source = getElementsByType('player') end
+--     local clientScripts = {}
     
-    for name, res in pairs(resources) do
-        if not res.clientLoaded then
-            local external = {}
-            local localClient = {}
-            for i=1, #res.client do
-                if string.find(res.client[i], 'http') then
-                    external[#external+1] = res.client[i]
-                else
-                    local file = fileOpen('addons/'..name..'/'..res.client[i])
+--     for name, res in pairs(resources) do
+--         if not res.clientLoaded then
+--             local external = {}
+--             local localClient = {}
+--             for i=1, #res.client do
+--                 if string.find(res.client[i], 'http') then
+--                     external[#external+1] = res.client[i]
+--                 else
+--                     local file = fileOpen('addons/'..name..'/'..res.client[i])
 
-                    localClient[#localClient+1] = file:read(file.size)
-                    file:close()
-                end
-            end
-            table.insert(clientScripts, {
-                name = name,
-                external = external,
-                localClient = localClient
-            })
-            res.clientLoaded = true
-        end
-    end
+--                     localClient[#localClient+1] = file:read(file.size)
+--                     file:close()
+--                 end
+--             end
+--             table.insert(clientScripts, {
+--                 name = name,
+--                 external = external,
+--                 localClient = localClient
+--             })
+--             res.clientLoaded = true
+--         end
+--     end
     
-    if type(source) == 'table' then
-        for _, plr in pairs(source) do
-            -- if isElement(plr) and getElementType(plr) == 'player' then
-                plr:setData('clientScripts', clientScripts)
-            -- end
-        end
-    else
-        source:setData('clientScripts', clientScripts)
-    end
-end
-addEventHandler('onPlayerJoin', root, sendClientScripts)
+--     if type(source) == 'table' then
+--         for _, plr in pairs(source) do
+--             -- if isElement(plr) and getElementType(plr) == 'player' then
+--                 plr:setData('clientScripts', clientScripts)
+--             -- end
+--         end
+--     else
+--         source:setData('clientScripts', clientScripts)
+--     end
+-- end
+-- addEventHandler('onPlayerJoin', root, sendClientScripts)
 
 function Script:unload()
 	for i=1, #self.events do
@@ -379,6 +403,18 @@ end
 function Script:cmd(cmd, callback, restricted)
 	addCommandHandler(cmd, callback, restricted or false, false)
 	table.insert(self.cmds, {cmd, callback})
+end
+
+function Script:replaceFuncs()
+	local elemFuncs = {'Ped', 'createPed', 'Vehicle', 'createVehicle', 'Object', 'createObject', 'Marker', 'createMarker', 'Sound', 'playSound', 'playSound3D', 'Pickup', 'createPickup', 'createColCircle', 'ColShape.Circle', 'createColCuboid', 'ColShape.Cuboid', 'createColPolygon', 'ColShape.Polygon', 'createColRectangle', 'ColShape.Rectangle', 'createColSphere', 'ColShape.Sphere', 'createColTube', 'ColShape.Tube', 'createBlip', 'Blip', 'createBlipAttachedTo', 'Blip.createAttachedTo', 'createRadarArea', 'RadarArea', 'Sound', 'Sound3D', 'playSFX', 'playSFX3D', 'createProjectile', 'Projectile', 'createTeam', 'Team.create', 'guiCreateFont', 'GuiFont', 'guiCreateBrowser', 'GuiBrowser', 'guiCreateButton', 'GuiButton', 'guiCreateCheckBox', 'GuiCheckBox', 'guiCreateComboBox', 'GuiComboBox', 'guiCreateEdit', 'GuiEdit', 'guiCreateGridList', 'GuiGridList', 'guiCreateMemo', 'GuiMemo', 'guiCreateProgressBar', 'GuiProgressBar', 'guiCreateRadioButton', 'GuiRadioButton', 'guiCreateScrollBar', 'GuiScrollBar', 'guiCreateScrollPane', 'GuiScrollPane', 'guiCreateStaticImage', 'GuiStaticImage', 'guiCreateTabPanel', 'GuiTabPanel', 'guiCreateTab', 'GuiTab', 'guiCreateLabel', 'GuiLabel', 'guiCreateWindow', 'GuiWindow', 'dxCreateTexture', 'DxTexture', 'dxCreateRenderTarget', 'DxRenderTarget', 'dxCreateScreenSource', 'DxScreenSource', 'dxCreateShader', 'DxShader', 'dxCreateFont', 'DxFont', 'createWeapon', 'Weapon', 'createEffect', 'Effect', 'Browser', 'createBrowser', 'createLight', 'Light', 'createSearchLight', 'SearchLight', 'createWater', 'Water'}
+	for i=1, #elemFuncs do
+		local origFunc = self.root.globals[elemFuncs[i]]
+		self.root.globals[elemFuncs[i]] = function(...)
+			local elem = origFunc(...)
+			table.insert(self.root.elements, elem)
+			return elem
+		end
+	end
 end
 
 addCommandHandler('startres', function(...) if not arg[3] then return end Res.start(arg[3]) end)

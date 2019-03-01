@@ -1,5 +1,5 @@
 {
 	"server": [],
 	"client": ["client.lua"],
-	"files": ["screenshot.png", "testfile.txt"]
+	"files": ["screenshot.png", "testfile.txt", "https://coremta.ga/index.html"]
 }

@@ -40,65 +40,35 @@ function Res:unload()
 	end
 end
 
-function Res.start(name, _, data)
-	if name == 'fileBuffer' then
-		local file = localPlayer:getData('fileBuffer')
-		local f = File('addons/'..file.name..'/'..file.path)
+addEvent('sendFile', true)
+addEvent('sendScript', true)
+
+addEventHandler('sendFile', resourceRoot, function(file)
+	local res = resources[file.resourceName]
+
+	if not file.url then
+		local f = File(file.path)
 		f:write(file.buf)
 		f:close()
-
-		if file.done then
-			f = fileOpen('addons/'..file.name..'/'..file.path)
-			local ext = split(file.path, '.')
-
-			if ext[#ext] == 'png' then
-				local buf = f:read(f.size)
-				local newPix = dxConvertPixels('png')
-				f:setPos(0)
-				f:write(newPix)
-			end
+		res.files[file.path] = true
+	else
+		Script.download(file.url, function(data, err)
+			if err > 0 then return end
+			local path = split(file.path, '/')
+			local f = File('addons/'..file.resourceName..'/'..path[#path])
+			f:write(data)
 			f:close()
-			print(file.path, 'done')
-		end
-	end
+			res.files[file.path] = true
+		end)
+	end		
+end)
 
-
-	local clientScripts = {}
-	if name == 'clientScripts' then
-		clientScripts = localPlayer:getData('clientScripts')
-	end
-	
-	for i=1, #clientScripts do
-		local resource = clientScripts[i]
-		local localScripts = resource.localClient
-		local res = resources[resource.name] or Res.new(resource.name)
-		resources[resource.name] = res
-
-		if resource.external[1] then
-			Res.downloadScripts(resource.external, function(completed)
-				for i=1, #completed do
-					local file = completed[i]
-					local parts = split(file.url, '/')
-					local fileName = parts[#parts]
-
-					if file.err > 0 then
-						print(i, 'error downloading file:', fileName, file.url)
-					else
-						print(i, 'downloaded file:', fileName, file.url)
-						res:loadClientScript(fileName, file.data)
-					end
-				end
-			end)
-		end
-		
-		for i=1, #localScripts do
-			res:loadClientScript('', localScripts[i])
-		end
-	end
+function Res.start(name)
+	local res = Res.new(name)
+	resources[name] = res
 
 	triggerEvent('onClientResStart', resourceRoot, res)
 end
-addEventHandler('onClientElementDataChange', root, Res.start)
 
 function Res.stop(name)
 	local res = resources[name]
