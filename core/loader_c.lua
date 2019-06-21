@@ -1,9 +1,11 @@
 addEvent('onClientResStart')
+addEvent('sendFile', true)
+addEvent('sendScript', true)
 
 Res = {}
 local resources = {}
 
-function Res.new(name)
+function Res.new(name, serverRoot)
 	local self = setmetatable({}, {__index = Res})
 	self.name = name
 	self.client = {}
@@ -11,6 +13,8 @@ function Res.new(name)
 	self.globals = {} -- this holds all the global variables/funcs of every script file in the resource
 	self.elements = {}
 	self.files = {}
+	self.resourceRoot = serverRoot
+	self.globals['resourceRoot'] = self.resourceRoot
 	setmetatable(self.globals, {__index = _G}) -- share mta and native functions with every script cause they all run in their own env
 	return self
 end
@@ -40,9 +44,6 @@ function Res:unload()
 	end
 end
 
-addEvent('sendFile', true)
-addEvent('sendScript', true)
-
 addEventHandler('sendFile', resourceRoot, function(file)
 	local res = resources[file.resourceName]
 
@@ -63,12 +64,21 @@ addEventHandler('sendFile', resourceRoot, function(file)
 	end		
 end)
 
-function Res.start(name)
-	local res = Res.new(name)
-	resources[name] = res
+addEventHandler('sendScript', resourceRoot, function(script)
+	local res = resources[script.resourceName]
+	if script.buf then
+		res:loadClientScript(script.path, script.buf)
+	end
+end)
 
+function Res.start(name, serverRoot)
+	local res = Res.new(name, serverRoot)
+	resources[name] = res
 	triggerEvent('onClientResStart', resourceRoot, res)
+	triggerServerEvent('onClientResStart', resourceRoot, name)
 end
+addEvent('onResStart', true)
+addEventHandler('onResStart', resourceRoot, Res.start)
 
 function Res.stop(name)
 	local res = resources[name]
@@ -256,6 +266,7 @@ function Script:replaceFuncs()
 		local origFunc = self.root.globals[elemFuncs[i]]
 		self.root.globals[elemFuncs[i]] = function(...)
 			local elem = origFunc(...)
+			elem:setParent(self.root.resourceRoot)
 			table.insert(self.root.elements, elem)
 			return elem
 		end

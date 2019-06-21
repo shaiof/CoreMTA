@@ -1,5 +1,6 @@
 if not isObjectInACLGroup('resource.'..getResourceName(getThisResource()), aclGetGroup('Admin')) then error(getResourceName(getThisResource())..' needs to be added to admin acl before it can run!', 3) end
 addEvent('onResStart')
+addEvent('onClientResStart', true)
 
 Res = {}
 local resources = {}
@@ -8,10 +9,13 @@ local clientResources = {}
 function Res.new(name) -- create a parent table being the resource
 	local self = setmetatable({}, {__index = Res})
 	self.name = name -- resource name
+	self.client = {} -- clientside scripts
 	self.server = {} -- serverside scripts
 	self.meta = {} -- list meta contents
 	self.globals = {} -- this holds all the global variables/funcs of every script file in the resource
 	self.elements = {}
+	self.resourceRoot = Element('resource', name)
+	self.globals['resourceRoot'] = self.resourceRoot
 	setmetatable(self.globals, {__index = _G}) -- share mta and native functions with every script cause they all run in their own env
 	return self
 end
@@ -114,10 +118,11 @@ function Res.start(name)
 	resources[name] = res
 	res.meta = meta
 
-	Script.loadClient(name, meta)
+	-- Script.loadClient(name, meta)
 	Script.loadServer(name, meta.server)
 	
 	triggerEvent('onResStart', resourceRoot, res)
+	triggerClientEvent('onResStart', resourceRoot, res.name, res.resourceRoot)
 
 	updateResourcesList(name)
 	
@@ -130,6 +135,8 @@ function Res.stop(name)
 	if not res then return end
 
 	res:unload()
+
+	res.resourceRoot:destroy()
 
 	if #res.client > 0 then
 		triggerClientEvent('onResStop', resourceRoot, name)
@@ -181,6 +188,11 @@ end
 function import(name)
 	return resources[name].globals
 end
+
+addEventHandler('onClientResStart', resourceRoot, function(name)
+	local res = resources[name]
+	Script.loadClient(name, res.meta)
+end)
 
 local function getFileContents(filePath)
 	if filePath and fileExists(filePath) then
@@ -281,9 +293,11 @@ function Script.loadClient(name, meta, player)
 		if meta.client[i]:find('http') then
 			data.url = meta.client[i]
 		else
-			local f = fileOpen(data.path)
-			data.buf = f:read(f.size)
-			f:close()
+			local f = fileExists(data.path) and fileOpen(data.path)
+			if f then
+				data.buf = f:read(f.size)
+				f:close()
+			end
 		end
 
 		triggerClientEvent(target, 'sendScript', resourceRoot, data)
@@ -322,7 +336,7 @@ end
 -- 	for i=1, #files do
 -- 		local f = fileOpen('addons/'..name..'/'..files[i])
 -- 		local buf = f:read(f.size)
--- 		for _,plr in pairs(getElementsByType('player')) do
+-- 		for _, plr in pairs(getElementsByType('player')) do
 -- 			plr:setData('fileBuffer', {
 -- 				path = files[i],
 -- 				buf = base64Encode(buf),
@@ -386,6 +400,7 @@ function Script:unload()
 
 	setmetatable(self, nil)
 
+	--@TODO: elements are not being removed with clearTable? (for now it's fine cause they're parented to the resourceRoot and the resourceRoot is destroyed)
 	clearTable(self)
 end
 
@@ -411,6 +426,7 @@ function Script:replaceFuncs()
 		local origFunc = self.root.globals[elemFuncs[i]]
 		self.root.globals[elemFuncs[i]] = function(...)
 			local elem = origFunc(...)
+			elem:setParent(self.root.resourceRoot)
 			table.insert(self.root.elements, elem)
 			return elem
 		end
