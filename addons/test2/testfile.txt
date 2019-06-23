@@ -1,4 +1,0 @@
-just a simple test
-hello
-world
-hi

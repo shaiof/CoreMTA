@@ -1,3 +1,6 @@
-local utils = require(':'..getResourceName(getThisResource())..'/addons/test2/server.lua')
+-- test with bot module
 
-print(utils.round(15.2515, 2))
+local Bot = require('modules/bot.lua')
+
+local bot = Bot.new(21, -1742.529, 866.684, 25.086, 183.576)
+iprint(bot)
