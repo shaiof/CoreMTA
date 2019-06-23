@@ -80,6 +80,11 @@ end
 addEvent('onResStart', true)
 addEventHandler('onResStart', resourceRoot, Res.start)
 
+function onResStart()
+	triggerServerEvent('onClientJoin', resourceRoot)
+end
+addEventHandler('onClientResourceStart', resourceRoot, onResStart)
+
 function Res.stop(name)
 	local res = resources[name]
 	if res then
@@ -143,30 +148,6 @@ function Res.getAll()
 	return resources
 end
 
-local function getFileContents(filePath)
-	if not filePath then return end
-	if fileExists(filePath) then
-		local f = fileOpen(filePath)
-		local content = f:read(f.size)
-		f:close()
-		return content
-	end
-	return false
-end
-
-function require(filePath)
-	if type(filePath) ~= 'string' then
-		error("bad arg #1 to 'require' (string expected)", 3)
-	end
-
-	local content = getFileContents(filePath, isUrl)
-
-	if not content then
-		error("can't require '"..filePath.."' (doesn't exist)", 2)
-	end
-
-	return loadstring('return function() '..content..' end')()()
-end
 
 Script = {}
 

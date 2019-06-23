@@ -122,7 +122,7 @@ function Res.start(name)
 	Script.loadServer(name, meta.server)
 	
 	triggerEvent('onResStart', resourceRoot, res)
-	triggerClientEvent('onResStart', resourceRoot, res.name, res.resourceRoot)
+	triggerClientEvent('onResStart', resourceRoot, name, res.resourceRoot)
 
 	updateResourcesList(name)
 	
@@ -191,32 +191,16 @@ end
 
 addEventHandler('onClientResStart', resourceRoot, function(name)
 	local res = resources[name]
-	Script.loadClient(name, res.meta)
+	Script.loadClient(name, res.meta, client)
 end)
 
-local function getFileContents(filePath)
-	if filePath and fileExists(filePath) then
-		local f = fileOpen(filePath)
-		local content = f:read(f.size)
-		f:close()
-		return content
+addEvent('onClientJoin', true)
+addEventHandler('onClientJoin', resourceRoot, function()
+	for name, res in pairs(resources) do
+		triggerClientEvent(client, 'onResStart', resourceRoot, name, res.resourceRoot)
 	end
-	return false
-end
+end)
 
-function require(filePath)
-	if type(filePath) ~= 'string' then
-		error("bad arg #1 to 'require' (string expected)", 3)
-	end
-
-	local content = getFileContents(filePath)
-
-	if not content then
-		error("can't require '"..filePath.."' (doesn't exist)", 2)
-	end
-
-	return loadstring('return function() '..content..' end')()()
-end
 
 Script = {}
 
@@ -233,18 +217,7 @@ function Script.new(name, fileName)
 end
 
 function Script.create(name, fileName, buffer)
-	local gt = {
-		{'addCommandHandler', 's:cmd'},
-		{'addEventHandler', 's:event'},
-		{'setTimer', 's:timer'},
-		{'Timer', 's:timer'},
-		{'onResourceStart', 'onResStart'}
-	}
-	
-	for i=1, #gt do
-		buffer = buffer:gsub(unpack(gt[i]))
-	end
-
+	buffer = Script.parseBuffer(buffer)
 	buffer = ('return function() local s = Script.new("%s", "%s"); s:replaceFuncs(); %s\nreturn s end'):format(name, fileName, buffer)
 
 	local fnc, err = loadstring(buffer)
@@ -258,6 +231,22 @@ function Script.create(name, fileName, buffer)
 	else
 		return type(fnc) == 'function' and fnc(), err
 	end
+end
+
+function Script.parseBuffer(buffer)
+	local gt = {
+		{'addCommandHandler', 's:cmd'},
+		{'addEventHandler', 's:event'},
+		{'setTimer', 's:timer'},
+		{'Timer', 's:timer'},
+		{'onResourceStart', 'onResStart'}
+	}
+	
+	for i=1, #gt do
+		buffer = buffer:gsub(unpack(gt[i]))
+	end
+
+	return buffer
 end
 
 function Script.loadClient(name, meta, player)
@@ -304,12 +293,6 @@ function Script.loadClient(name, meta, player)
 	end
 end
 
-addEventHandler('onPlayerJoin', root, function()
-	for name, res in pairs(resources) do
-		Script.loadClient(name, res.meta, source)
-	end
-end)
-
 function Script.loadServer(name, files)
 	local external = {}
 	for i=1, #files do
@@ -331,6 +314,58 @@ function Script.loadServer(name, files)
 	end
 	resources[name]:loadExternal(external)
 end
+
+function Script:unload()
+	for i=1, #self.events do
+		removeEventHandler(unpack(self.events[i]))
+		self.events[i] = nil
+	end
+
+	for i=1, #self.cmds do
+		removeCommandHandler(unpack(self.cmds[i]))
+		self.cmds[i] = nil
+	end
+
+	setmetatable(self, nil)
+
+	--@TODO: elements are not being removed with clearTable? (for now it's fine cause they're parented to the resourceRoot and the resourceRoot is destroyed)
+	clearTable(self)
+end
+
+function Script:event(name, root, func, ...)
+	addEventHandler(name, root, func, ...)
+	table.insert(self.events, {name, root, func})
+end
+
+function Script:timer(callback, interval, times, ...)
+	local timer = setTimer(callback, interval, times, ...)
+	table.insert(self.timers, timer)
+	return timer
+end
+
+function Script:cmd(cmd, callback, restricted)
+	addCommandHandler(cmd, callback, restricted or false, false)
+	table.insert(self.cmds, {cmd, callback})
+end
+
+function Script:replaceFuncs()
+	local elemFuncs = {'Ped', 'createPed', 'Vehicle', 'createVehicle', 'Object', 'createObject', 'Marker', 'createMarker', 'Sound', 'playSound', 'playSound3D', 'Pickup', 'createPickup', 'createColCircle', 'ColShape.Circle', 'createColCuboid', 'ColShape.Cuboid', 'createColPolygon', 'ColShape.Polygon', 'createColRectangle', 'ColShape.Rectangle', 'createColSphere', 'ColShape.Sphere', 'createColTube', 'ColShape.Tube', 'createBlip', 'Blip', 'createBlipAttachedTo', 'Blip.createAttachedTo', 'createRadarArea', 'RadarArea', 'Sound', 'Sound3D', 'playSFX', 'playSFX3D', 'createProjectile', 'Projectile', 'createTeam', 'Team.create', 'guiCreateFont', 'GuiFont', 'guiCreateBrowser', 'GuiBrowser', 'guiCreateButton', 'GuiButton', 'guiCreateCheckBox', 'GuiCheckBox', 'guiCreateComboBox', 'GuiComboBox', 'guiCreateEdit', 'GuiEdit', 'guiCreateGridList', 'GuiGridList', 'guiCreateMemo', 'GuiMemo', 'guiCreateProgressBar', 'GuiProgressBar', 'guiCreateRadioButton', 'GuiRadioButton', 'guiCreateScrollBar', 'GuiScrollBar', 'guiCreateScrollPane', 'GuiScrollPane', 'guiCreateStaticImage', 'GuiStaticImage', 'guiCreateTabPanel', 'GuiTabPanel', 'guiCreateTab', 'GuiTab', 'guiCreateLabel', 'GuiLabel', 'guiCreateWindow', 'GuiWindow', 'dxCreateTexture', 'DxTexture', 'dxCreateRenderTarget', 'DxRenderTarget', 'dxCreateScreenSource', 'DxScreenSource', 'dxCreateShader', 'DxShader', 'dxCreateFont', 'DxFont', 'createWeapon', 'Weapon', 'createEffect', 'Effect', 'Browser', 'createBrowser', 'createLight', 'Light', 'createSearchLight', 'SearchLight', 'createWater', 'Water'}
+	for i=1, #elemFuncs do
+		local origFunc = self.root.globals[elemFuncs[i]]
+		self.root.globals[elemFuncs[i]] = function(...)
+			local elem = origFunc(...)
+			elem:setParent(self.root.resourceRoot)
+			table.insert(self.root.elements, elem)
+			return elem
+		end
+	end
+end
+
+addCommandHandler('startres', function(...) if not arg[3] then return end Res.start(arg[3]) end)
+addCommandHandler('stopres', function(...) if not arg[3] then return end Res.stop(arg[3]) end)
+addCommandHandler('restartres', function(...) if not arg[3] then return end Res.restart(arg[3]) end)
+addCommandHandler('inspectres', function(...) if not arg[3] then return end Res.inspect(arg[3]) end)
+
 
 -- function Script.loadFiles(name, files)
 -- 	for i=1, #files do
@@ -386,54 +421,3 @@ end
 --     end
 -- end
 -- addEventHandler('onPlayerJoin', root, sendClientScripts)
-
-function Script:unload()
-	for i=1, #self.events do
-		removeEventHandler(unpack(self.events[i]))
-		self.events[i] = nil
-	end
-
-	for i=1, #self.cmds do
-		removeCommandHandler(unpack(self.cmds[i]))
-		self.cmds[i] = nil
-	end
-
-	setmetatable(self, nil)
-
-	--@TODO: elements are not being removed with clearTable? (for now it's fine cause they're parented to the resourceRoot and the resourceRoot is destroyed)
-	clearTable(self)
-end
-
-function Script:event(name, root, func, ...)
-	addEventHandler(name, root, func, ...)
-	table.insert(self.events, {name, root, func})
-end
-
-function Script:timer(callback, interval, times, ...)
-	local timer = setTimer(callback, interval, times, ...)
-	table.insert(self.timers, timer)
-	return timer
-end
-
-function Script:cmd(cmd, callback, restricted)
-	addCommandHandler(cmd, callback, restricted or false, false)
-	table.insert(self.cmds, {cmd, callback})
-end
-
-function Script:replaceFuncs()
-	local elemFuncs = {'Ped', 'createPed', 'Vehicle', 'createVehicle', 'Object', 'createObject', 'Marker', 'createMarker', 'Sound', 'playSound', 'playSound3D', 'Pickup', 'createPickup', 'createColCircle', 'ColShape.Circle', 'createColCuboid', 'ColShape.Cuboid', 'createColPolygon', 'ColShape.Polygon', 'createColRectangle', 'ColShape.Rectangle', 'createColSphere', 'ColShape.Sphere', 'createColTube', 'ColShape.Tube', 'createBlip', 'Blip', 'createBlipAttachedTo', 'Blip.createAttachedTo', 'createRadarArea', 'RadarArea', 'Sound', 'Sound3D', 'playSFX', 'playSFX3D', 'createProjectile', 'Projectile', 'createTeam', 'Team.create', 'guiCreateFont', 'GuiFont', 'guiCreateBrowser', 'GuiBrowser', 'guiCreateButton', 'GuiButton', 'guiCreateCheckBox', 'GuiCheckBox', 'guiCreateComboBox', 'GuiComboBox', 'guiCreateEdit', 'GuiEdit', 'guiCreateGridList', 'GuiGridList', 'guiCreateMemo', 'GuiMemo', 'guiCreateProgressBar', 'GuiProgressBar', 'guiCreateRadioButton', 'GuiRadioButton', 'guiCreateScrollBar', 'GuiScrollBar', 'guiCreateScrollPane', 'GuiScrollPane', 'guiCreateStaticImage', 'GuiStaticImage', 'guiCreateTabPanel', 'GuiTabPanel', 'guiCreateTab', 'GuiTab', 'guiCreateLabel', 'GuiLabel', 'guiCreateWindow', 'GuiWindow', 'dxCreateTexture', 'DxTexture', 'dxCreateRenderTarget', 'DxRenderTarget', 'dxCreateScreenSource', 'DxScreenSource', 'dxCreateShader', 'DxShader', 'dxCreateFont', 'DxFont', 'createWeapon', 'Weapon', 'createEffect', 'Effect', 'Browser', 'createBrowser', 'createLight', 'Light', 'createSearchLight', 'SearchLight', 'createWater', 'Water'}
-	for i=1, #elemFuncs do
-		local origFunc = self.root.globals[elemFuncs[i]]
-		self.root.globals[elemFuncs[i]] = function(...)
-			local elem = origFunc(...)
-			elem:setParent(self.root.resourceRoot)
-			table.insert(self.root.elements, elem)
-			return elem
-		end
-	end
-end
-
-addCommandHandler('startres', function(...) if not arg[3] then return end Res.start(arg[3]) end)
-addCommandHandler('stopres', function(...) if not arg[3] then return end Res.stop(arg[3]) end)
-addCommandHandler('restartres', function(...) if not arg[3] then return end Res.restart(arg[3]) end)
-addCommandHandler('inspectres', function(...) if not arg[3] then return end Res.inspect(arg[3]) end)
