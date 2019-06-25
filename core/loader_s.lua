@@ -216,9 +216,9 @@ function Script.new(name, fileName)
 	return self
 end
 
-function Script.create(name, fileName, buffer)
+function Script.create(resName, fileName, buffer)
 	buffer = Script.parseBuffer(buffer)
-	buffer = ('return function() local s = Script.new("%s", "%s"); s:replaceFuncs(); %s\nreturn s end'):format(name, fileName, buffer)
+	buffer = ('return function() local s = Script.new("%s", "%s"); s:replaceFuncs();\n%s\nreturn s end'):format(resName, fileName, buffer)
 
 	local fnc, err = loadstring(buffer)
 	
@@ -227,10 +227,15 @@ function Script.create(name, fileName, buffer)
 		local _, lastChar, lineNum = err:find(':(%d+):')
 		err = err:sub(lastChar+2)
 		
-		return nil, ('%s/%s:%s: %s'):format(name, fileName, lineNum, err)
+		return nil, ('%s/%s:%s: %s'):format(resName, fileName, lineNum, err)
 	else
 		return type(fnc) == 'function' and fnc(), err
 	end
+end
+
+function Script.get(resName, fileName)
+	local script = resources[resName].server[fileName]
+	return script
 end
 
 function Script.parseBuffer(buffer)
@@ -358,6 +363,10 @@ function Script:replaceFuncs()
 			table.insert(self.root.elements, elem)
 			return elem
 		end
+	end
+	local origFunc = self.root.globals['require']
+	self.root.globals['require'] = function(...)
+		return unpack({origFunc(self, ...)})
 	end
 end
 

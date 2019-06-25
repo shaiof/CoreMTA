@@ -33,16 +33,32 @@ local function getFileContents(filePath)
 	return false
 end
 
-function require(filePath) -- need to require before Scripts are parsed and loaded OR need to parse the file contents here
+function require(script, filePath)
 	if type(filePath) ~= 'string' then
 		error("bad arg #1 to 'require' (string expected)", 3)
 	end
 
-	local content = getFileContents(filePath)
+	local buffer = getFileContents(filePath)
 
-	if not content then
+	if not buffer then
 		error("can't require '"..filePath.."' (doesn't exist)", 2)
 	end
 
-	return loadstring('return function() '..content..' end')()()
+	buffer = 'return function() '..buffer..' end'
+	
+	return loadstring(buffer)()() -- this needs to be parsed/loaded in just like the Script is
 end
+
+-- buffer = Script.parseBuffer(buffer)
+-- -- buffer = ('return function() local s = Script.get("%s", "%s"); s:replaceFuncs(); \n %s \n end'):format(script.root.name, script.fileName, buffer)
+-- buffer = ('return function() local s = Script.get("%s", "%s"); s:replaceFuncs(); \n %s \n return s end'):format(script.root.name, script.fileName, buffer)
+
+-- -- buffer = ('return function() local s = Script.new("%s", "%s"); s:replaceFuncs();\n%s\nreturn s end'):format(name, fileName, buffer)
+
+-- local fenv = getfenv(script)
+-- local script = loadstring(buffer)()
+-- setfenv(script, fenv)
+
+-- local args = {script()}
+
+-- return unpack(args)

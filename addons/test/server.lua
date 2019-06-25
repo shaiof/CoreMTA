@@ -1,6 +1,7 @@
 -- test with bot module
 
-local Bot = require('modules/bot.lua')
+local Bot = require('modules/bot/bot.lua')
 
-local bot = Bot.new(21, -1742.529, 866.684, 25.086, 183.576)
-iprint(bot)
+local bot = Bot.new(21, -1889.495, 830.907, 35.172)
+
+local p = Ped(22, Player('morty').position)
