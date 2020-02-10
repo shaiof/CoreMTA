@@ -11,12 +11,12 @@ Does not require third party, runs just like any other MTA resource.
 ### ShayF
 #### Projects -
 
-CoreMTA								https://github.com/shaiof/CoreMTA
+Discord: https://discord.gg/p7vWpSk
 
-Vehicle Manipulation Framework		https://github.com/shaiof/My-Scripts/tree/master/tuneshop
+CoreMTA: https://github.com/shaiof/CoreMTA
 
-DX Framework						https://github.com/shaiof/My-Scripts/tree/master/dxLib
+Vehicle Manipulation Framework: https://github.com/shaiof/My-Scripts/tree/master/tuneshop
 
-SQL Framework						https://github.com/shaiof/Core-Loader/blob/master/Core%20v2.0.0/core/sql_s.lua
+DX Framework: https://github.com/shaiof/My-Scripts/tree/master/dxLib
 
-Discord Integration					https://github.com/shaiof/My-Scripts/tree/master/discord-events
+Discord Integration: https://github.com/shaiof/My-Scripts/tree/master/discord-events
