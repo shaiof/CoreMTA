@@ -3,7 +3,7 @@
 > **Note:** This code is open source, everyone is free to use the code in their own projects.
 
 ## About
-Loading scripts fast, sharing data instantly, allowing for full optimization and flexibility.
+60% faster script loading, 60% faster client downloads, 100% security, instant communication between scripts without use of exports or events, ability to add global mta functions, and support for external script loading.
 ...
 
 ### ShayF
