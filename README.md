@@ -29,7 +29,7 @@ Email: fencski@gmail.com
 
 MTA Forum: https://forum.mtasa.com/profile/49373-shayf/ & https://forum.mtasa.com/profile/48912-shayf2/
 
-#### Projects
+#### - Projects
 CoreMTA: https://github.com/shaiof/CoreMTA
 
 Vehicle Manipulation Framework: https://github.com/shaiof/My-Scripts/tree/master/tuneshop
@@ -44,6 +44,9 @@ Ped Maker: https://github.com/shaiof/My-Scripts/tree/master/pedmaker
 
 Vehicle to Object Color Shader: https://github.com/shaiof/My-Scripts/tree/master/shader
 
+
+
+
 ### Tails
 Steam: https://steamcommunity.com/id/wassup974541951/
 
@@ -55,7 +58,7 @@ Github: https://github.com/moon91210
 
 MTA Forum: https://forum.mtasa.com/profile/33111-tails/
 
-#### Projects
+#### - Projects
 CoreMTA: https://github.com/shaiof/CoreMTA
 
 DX Gui: https://github.com/moon91210/mta-dxgui
