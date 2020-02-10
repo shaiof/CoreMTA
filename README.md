@@ -43,10 +43,7 @@ Vehicle Component Manipulation: https://github.com/shaiof/My-Scripts/tree/master
 Ped Maker: https://github.com/shaiof/My-Scripts/tree/master/pedmaker
 
 Vehicle to Object Color Shader: https://github.com/shaiof/My-Scripts/tree/master/shader
-
-
-
-
+#
 ### Tails
 Steam: https://steamcommunity.com/id/wassup974541951/
 
