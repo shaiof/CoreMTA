@@ -4,6 +4,8 @@
 
 ## About
 60% faster script loading, 60% faster client downloads, 100% security, instant communication between scripts without use of exports or events, ability to add global mta functions, and support for external script loading.
+
+Does not require third party, runs just like any other MTA resource.
 ...
 
 ### ShayF
