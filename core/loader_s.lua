@@ -6,17 +6,18 @@ Res = {}
 local resources = {}
 local clientResources = {}
 
-function Res.new(name) -- create a parent table being the resource
+function Res.new(name)
 	local self = setmetatable({}, {__index = Res})
-	self.name = name -- resource name
-	self.client = {} -- clientside scripts
-	self.server = {} -- serverside scripts
-	self.meta = {} -- list meta contents
-	self.globals = {} -- this holds all the global variables/funcs of every script file in the resource
+	self.name = name
+	self.client = {}
+	self.server = {}
+	self.meta = {}
+	self.globals = {}
 	self.elements = {}
+	self.files = {}
 	self.resourceRoot = Element('resource', name)
 	self.globals['resourceRoot'] = self.resourceRoot
-	setmetatable(self.globals, {__index = _G}) -- share mta and native functions with every script cause they all run in their own env
+	setmetatable(self.globals, {__index = _G})
 	return self
 end
 
@@ -60,7 +61,6 @@ function Res:loadExternal(files)
 end
 
 function Res:loadServerScript(fileName, buffer)
-	-- get function that will run and return the script object
 	local script, err = Script.create(self.name, fileName, buffer)
 	if err then
 		return false, err
@@ -69,13 +69,10 @@ function Res:loadServerScript(fileName, buffer)
 	if not script then
 		error('error loading file', fileName, 'in', self.name)
 	end
-	-- set the environment of the script function to sandbox everything that's executed by it
+
 	setfenv(script, self.globals)
-	-- execute the script function
 	script = script()
-	-- store the resource's globals into the script object
 	script.globals = globals
-	-- store the script object in the server table in the resource object
 	self.server[fileName] = script
 
 	return true, err
@@ -88,7 +85,7 @@ function Res:unload()
 end
 
 local function updateResourcesList(name)
-	local path = 'addons/resources.json'
+	local path = 'scripts/resources.json'
 	local f = File(path)
 	local list = fromJSON(f:read(f.size)) or {}
 
@@ -102,13 +99,14 @@ local function updateResourcesList(name)
 end
 
 function Res.start(name)
+	local oName = ''..name
 	local name = name:lower()
 
 	if resources[name] then
 		return print("resource '"..name.."' already started")
 	end
 
-	local meta = Res.getMeta(name)
+	local meta = Res.getMeta(oName)
 
 	if not meta then
 		return print("no meta found for resource '"..name.."'")
@@ -117,12 +115,34 @@ function Res.start(name)
 	local res = Res.new(name)
 	resources[name] = res
 	res.meta = meta
-
-	-- Script.loadClient(name, meta)
-	Script.loadServer(name, meta.server)
+	res.info = meta.info or {}
 	
-	triggerEvent('onResStart', resourceRoot, res)
-	triggerClientEvent('onResStart', resourceRoot, name, res.resourceRoot)
+	-- sort out meta info
+	res.info.name, res.info.author, res.info.version, res.info.description, res.info.type, res.info.gamemodes = res.info.name or name, res.info.author or 'CoreMTA', res.info.version or '0.1', res.info.description or '', res.info.type or '', res.info.gamemodes or ''
+
+	local serverScripts, clientScripts, serverFiles, clientFiles = {}, {}, {}, {}
+	for i, v in pairs(meta.server) do
+		if v:find('.lua') then
+			serverScripts[#serverScripts+1] = v
+		else
+			serverFiles[#serverFiles+1] = v
+		end
+	end
+	
+	for r, t in pairs(meta.client) do
+		if t:find('.lua') then
+			clientScripts[#clientScripts+1] = t
+		else
+			clientFiles[#clientFiles+1] = t
+		end
+	end
+	
+	for e=1, #serverFiles do
+		resources[name].files[serverFiles[e]] = true
+	end
+	
+	Script.loadServer(name, serverScripts, serverFiles)
+	triggerClientEvent('onResStart', resourceRoot, name, res.resourceRoot, {clientScripts, clientFiles})
 
 	updateResourcesList(name)
 	
@@ -156,11 +176,45 @@ function Res.restart(name)
 end
 
 function Res.getMeta(name)
-	local path = 'addons/'..name..'/meta.json'
-	if fileExists(path) then
-		local f = File(path)
+	local json = 'scripts/'..name..'/meta.json'
+	local xml = 'scripts/'..name..'/meta.xml'
+	if fileExists(json) then
+		local f = File(json)
 		local meta = fromJSON(f:read(f.size))
 		f:close()
+		return meta
+	elseif fileExists(xml) then
+		local meta = {info = {}, server = {}, client = {}}
+		local node = xmlLoadFile(xml)
+		local info = xmlFindChild(node, 'info', 0)
+		
+		if info then
+			for k, v in pairs(xmlNodeGetAttributes(info)) do
+				meta.info[k] = v
+			end
+		end
+		
+		local others = xmlNodeGetChildren(node)
+		for i, o in pairs(others) do
+			if xmlNodeGetName(o) == 'script' or xmlNodeGetName(o) == 'file' then
+				local attr = xmlNodeGetAttributes(o)
+				if attr.type == 'client' then
+					meta.client[#meta.client+1] = attr.src
+				elseif attr.type == 'shared' then
+					meta.client[#meta.client+1] = attr.src
+					meta.server[#meta.server+1] = attr.src
+				else
+					meta.server[#meta.server+1] = attr.src
+				end
+			end
+		end
+		xmlUnloadFile(node)
+		
+		local f = File(json)
+		f:write(toJSON(meta))
+		f:close()
+		fileDelete(xml)
+		
 		return meta
 	end
 	return false
@@ -186,21 +240,20 @@ function Res.getAll()
 end
 
 function import(name)
-	return resources[name].globals
+    return resources[name].globals
 end
 
-addEventHandler('onClientResStart', resourceRoot, function(name)
+addEventHandler('onClientResStart', resourceRoot, function(name, files)
 	local res = resources[name]
-	Script.loadClient(name, res.meta, client)
+	Script.loadClient(name, files, client)
 end)
 
 addEvent('onClientJoin', true)
 addEventHandler('onClientJoin', resourceRoot, function()
 	for name, res in pairs(resources) do
-		triggerClientEvent(client, 'onResStart', resourceRoot, name, res.resourceRoot)
+		triggerClientEvent(client, 'onResStart', resourceRoot, name, res.resourceRoot, {res.client, res.clientFiles})
 	end
 end)
-
 
 Script = {}
 
@@ -217,19 +270,26 @@ function Script.new(name, fileName)
 end
 
 function Script.create(resName, fileName, buffer)
+	for b, c in pairs(resources[resName].files) do
+		if c then
+			buffer = buffer:gsub(b, 'scripts/'..resName..'/'..b)
+		end
+	end
 	buffer = Script.parseBuffer(buffer)
+	local testBuffer = ''..buffer
 	buffer = ('return function() local s = Script.new("%s", "%s"); s:replaceFuncs();\n%s\nreturn s end'):format(resName, fileName, buffer)
 
-	local fnc, err = loadstring(buffer)
+	local fnc, err2 = loadstring(testBuffer)
+	local fnc2, err3 = loadstring(buffer)
 	
-	local suc = pcall(fnc)
+	local suc, err = pcall(fnc)
 	if not suc then
 		local _, lastChar, lineNum = err:find(':(%d+):')
 		err = err:sub(lastChar+2)
 		
 		return nil, ('%s/%s:%s: %s'):format(resName, fileName, lineNum, err)
 	else
-		return type(fnc) == 'function' and fnc(), err
+		return type(fnc2) == 'function' and fnc2(), err
 	end
 end
 
@@ -254,38 +314,36 @@ function Script.parseBuffer(buffer)
 	return buffer
 end
 
-function Script.loadClient(name, meta, player)
+function Script.loadClient(name, files, player)
 	local target = player or root
 
 	-- send files
-	for i=1, #meta.files do
+	for k=1, #files[2] do
 		local data = {
 			resourceName = name,
-			path = 'addons/'..name..'/'..meta.files[i]
+			path = 'scripts/'..name..'/'..files[2][k]
 		}
 
-		if meta.files[i]:find('http') then
-			data.url = meta.files[i]
+		if files[2][k]:find('http') then
+			data.url = files[2][k]
 		else
 			local f = fileOpen(data.path)
 			data.buf = f:read(f.size)
 			f:close()
 		end
 
-		print(meta.files[i])
-
 		triggerClientEvent(target, 'sendFile', resourceRoot, data)
 	end
 
 	-- send scripts
-	for i=1, #meta.client do
+	for i=1, #files[1] do
 		local data = {
 			resourceName = name,
-			path = 'addons/'..name..'/'..meta.client[i]
+			path = 'scripts/'..name..'/'..files[1][i]
 		}
-
-		if meta.client[i]:find('http') then
-			data.url = meta.client[i]
+		
+		if files[1][i]:find('http') then
+			data.url = files[1][i]
 		else
 			local f = fileExists(data.path) and fileOpen(data.path)
 			if f then
@@ -298,14 +356,14 @@ function Script.loadClient(name, meta, player)
 	end
 end
 
-function Script.loadServer(name, files)
+function Script.loadServer(name, scripts, files)
 	local external = {}
-	for i=1, #files do
-		local fileName = files[i]
+	for i=1, #scripts do
+		local fileName = scripts[i]
 		if string.find(fileName, 'http') then
 			external[#external+1] = fileName
 		else
-			local path = 'addons/'..name..'/'..fileName
+			local path = 'scripts/'..name..'/'..fileName
 			if File.exists(path) then
 				local f = File(path)
 				local b = f:read(f.size)
@@ -375,58 +433,12 @@ addCommandHandler('stopres', function(...) if not arg[3] then return end Res.sto
 addCommandHandler('restartres', function(...) if not arg[3] then return end Res.restart(arg[3]) end)
 addCommandHandler('inspectres', function(...) if not arg[3] then return end Res.inspect(arg[3]) end)
 
-
--- function Script.loadFiles(name, files)
--- 	for i=1, #files do
--- 		local f = fileOpen('addons/'..name..'/'..files[i])
--- 		local buf = f:read(f.size)
--- 		for _, plr in pairs(getElementsByType('player')) do
--- 			plr:setData('fileBuffer', {
--- 				path = files[i],
--- 				buf = base64Encode(buf),
--- 				name = name,
--- 				done = fileIsEOF(f)
--- 			})
--- 		end
--- 		f:close()
--- 	end
--- end
-
--- function sendClientScripts()
---     if not source then source = getElementsByType('player') end
---     local clientScripts = {}
-    
---     for name, res in pairs(resources) do
---         if not res.clientLoaded then
---             local external = {}
---             local localClient = {}
---             for i=1, #res.client do
---                 if string.find(res.client[i], 'http') then
---                     external[#external+1] = res.client[i]
---                 else
---                     local file = fileOpen('addons/'..name..'/'..res.client[i])
-
---                     localClient[#localClient+1] = file:read(file.size)
---                     file:close()
---                 end
---             end
---             table.insert(clientScripts, {
---                 name = name,
---                 external = external,
---                 localClient = localClient
---             })
---             res.clientLoaded = true
---         end
---     end
-    
---     if type(source) == 'table' then
---         for _, plr in pairs(source) do
---             -- if isElement(plr) and getElementType(plr) == 'player' then
---                 plr:setData('clientScripts', clientScripts)
---             -- end
---         end
---     else
---         source:setData('clientScripts', clientScripts)
---     end
--- end
--- addEventHandler('onPlayerJoin', root, sendClientScripts)
+-- autostart
+addEventHandler('onResourceStart', resourceRoot, function()
+	local f = fileOpen('autostart.json')
+	local buffer = fromJSON(f:read(f.size))
+	f:close()
+	for i=1, #buffer.resources do
+		Res.start(buffer.resources[i])
+	end
+end)

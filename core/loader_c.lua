@@ -56,7 +56,7 @@ addEventHandler('sendFile', resourceRoot, function(file)
 		Script.download(file.url, function(data, err)
 			if err > 0 then return end
 			local path = split(file.path, '/')
-			local f = File('addons/'..file.resourceName..'/'..path[#path])
+			local f = File('scripts/'..file.resourceName..'/'..path[#path])
 			f:write(data)
 			f:close()
 			res.files[file.path] = true
@@ -66,16 +66,24 @@ end)
 
 addEventHandler('sendScript', resourceRoot, function(script)
 	local res = resources[script.resourceName]
+	print(1)
 	if script.buf then
 		res:loadClientScript(script.path, script.buf)
 	end
 end)
 
-function Res.start(name, serverRoot)
+function Res.start(name, serverRoot, files)
 	local res = Res.new(name, serverRoot)
 	resources[name] = res
+	if files[2] then
+		for i=1, #files[2] do
+			resources[name].files[files[2][i]] = true
+		end
+	else
+		files[2] = {}
+	end
 	triggerEvent('onClientResStart', resourceRoot, res)
-	triggerServerEvent('onClientResStart', resourceRoot, name)
+	triggerServerEvent('onClientResStart', resourceRoot, name, files)
 end
 addEvent('onResStart', true)
 addEventHandler('onResStart', resourceRoot, Res.start)
@@ -129,8 +137,6 @@ function checkCursor()
 	showCursor(false)
 end
 setTimer(checkCursor, 50, 0)
-
-
 
 function Res.inspect(name)
 	local name = name:lower()
@@ -271,22 +277,34 @@ function Script.create(name, fileName, buffer)
 		{'showCursor', 's:cursor'},
 		{'onClientResourceStart', 'onClientResStart'}
 	}
-
+	
+	for b, c in pairs(resources[name].files) do
+		if c then
+			if resources[name].type == 'scripts' then
+				buffer = buffer:gsub(b, 'scripts/'..name..'/'..b)
+			elseif resources[name].type == 'module' then
+				buffer = buffer:gsub(b, 'modules/'..name..'/'..b)
+			end
+		end
+	end
+	
 	for i=1, #gt do
 		buffer = buffer:gsub(unpack(gt[i]))
 	end
 
+	local testBuffer = ''..buffer
 	buffer = ('return function() local s = Script.new("%s", "%s"); s:replaceFuncs(); %s\nreturn s end'):format(name, fileName, buffer)
 
-	local fnc, err = loadstring(buffer)
+	local fnc, err2 = loadstring(testBuffer)
+	local fnc2, err3 = loadstring(buffer)
 	
-	local suc = pcall(fnc)
+	local suc, err = pcall(fnc)
 	if not suc then
 		local _, lastChar, lineNum = err:find(':(%d+):')
 		err = err:sub(lastChar+2)
 		error(('%s/%s:%s: %s'):format(name, fileName, lineNum, err), 0)
 	else
-		return type(fnc) == 'function' and fnc()
+		return type(fnc2) == 'function' and fnc2(), err
 	end
 end
 
